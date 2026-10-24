@@ -39,3 +39,9 @@ yarn-error.*
 # generated native folders
 /ios
 /android
+
+# Python AI Engine
+__pycache__/
+*.pyc
+engine/cache/
+exports/

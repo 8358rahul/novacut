@@ -1,0 +1,10 @@
+{
+  "name": "novacut-native",
+  "platforms": ["android", "ios"],
+  "android": {
+    "modules": ["expo.modules.novacutnative.NovaCutNativeModule"]
+  },
+  "ios": {
+    "modules": ["NovaCutNativeModule"]
+  }
+}
