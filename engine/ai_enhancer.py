@@ -93,3 +93,4 @@ def enhance_image(
         "intensity": intensity,
         "dimensions": {"width": w, "height": h},
     }
+

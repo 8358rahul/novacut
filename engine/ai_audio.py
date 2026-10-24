@@ -136,3 +136,4 @@ def detect_audio_beats_and_waveforms(
         "beatDrops": beat_drops,
         "waveform": waveform,
     }
+

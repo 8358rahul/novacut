@@ -146,6 +146,20 @@ class TestNovaCutAIEngine(unittest.TestCase):
         e_data = e.json()
         self.assertEqual(e_data["status"], "success")
 
+        # /ai/upload (test uploading photo from mobile device)
+        with open(str(self.test_img_path), "rb") as f:
+            up = self.client.post("/ai/upload", files={"file": ("mobile_test.png", f, "image/png")})
+        self.assertEqual(up.status_code, 200)
+        up_data = up.json()
+        self.assertEqual(up_data["status"], "success")
+        self.assertIn("/cache/", up_data["downloadUrl"])
+
+        # Test calling /ai/remove-bg on the uploaded /cache/... path
+        c_cached = self.client.post("/ai/remove-bg", json={"imagePath": up_data["downloadUrl"]})
+        self.assertEqual(c_cached.status_code, 200)
+        self.assertEqual(c_cached.json()["status"], "success")
+
 
 if __name__ == "__main__":
     unittest.main()
+

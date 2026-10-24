@@ -102,6 +102,48 @@ export class AIEngineService {
   }
 
   /**
+   * Automatically uploads local media files from physical mobile devices (iPhone/Android)
+   * to the Python AI server host so OpenCV and FFmpeg can process them.
+   */
+  public async uploadIfLocalMedia(uri: string): Promise<string> {
+    if (!uri) return uri;
+    // Remote URLs, base64 strings, or already-cached assets don't need upload
+    if (
+      uri.startsWith('http://') ||
+      uri.startsWith('https://') ||
+      uri.startsWith('/cache/') ||
+      uri.startsWith('data:image/')
+    ) {
+      return uri;
+    }
+
+    try {
+      // Local device file URI (file:///var/mobile/..., ph://, content://, etc.)
+      const formData = new FormData();
+      const ext = uri.toLowerCase().includes('.png') ? 'png' : 'jpg';
+      const mime = ext === 'png' ? 'image/png' : 'image/jpeg';
+      formData.append('file', {
+        uri,
+        name: `upload_${Date.now()}.${ext}`,
+        type: mime,
+      } as any);
+
+      const res = await fetch(`${this.baseUrl}/ai/upload`, {
+        method: 'POST',
+        body: formData,
+      });
+
+      if (res.ok) {
+        const data = await res.json();
+        return data.downloadUrl || uri;
+      }
+    } catch (err) {
+      console.warn('AI media upload failed, attempting fallback with original URI:', err);
+    }
+    return uri;
+  }
+
+  /**
    * Health check to determine if Python AI Engine is running
    */
   public async checkHealth(): Promise<boolean> {
@@ -121,10 +163,11 @@ export class AIEngineService {
     iterations: number = 5,
     featherRadius: number = 5
   ): Promise<AICutoutResult> {
+    const targetPath = await this.uploadIfLocalMedia(imagePath);
     const res = await fetch(`${this.baseUrl}/ai/remove-bg`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ imagePath, iterations, featherRadius }),
+      body: JSON.stringify({ imagePath: targetPath, iterations, featherRadius }),
     });
 
     if (!res.ok) {
@@ -133,7 +176,7 @@ export class AIEngineService {
     }
 
     const data: AICutoutResult = await res.json();
-    if (data.downloadUrl && !data.fullUrl) {
+    if (data.downloadUrl) {
       data.fullUrl = `${this.baseUrl}${data.downloadUrl}`;
     }
     return data;
@@ -146,10 +189,11 @@ export class AIEngineService {
     mediaPath: string,
     targetAspect: string = '9:16'
   ): Promise<AIReframeResult> {
+    const targetPath = await this.uploadIfLocalMedia(mediaPath);
     const res = await fetch(`${this.baseUrl}/ai/auto-reframe`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ mediaPath, targetAspect }),
+      body: JSON.stringify({ mediaPath: targetPath, targetAspect }),
     });
 
     if (!res.ok) {
@@ -168,10 +212,11 @@ export class AIEngineService {
     mode: 'hdr' | 'portrait' | 'night_enhance' | 'vivid' = 'hdr',
     intensity: number = 1.0
   ): Promise<AIEnhanceResult> {
+    const targetPath = await this.uploadIfLocalMedia(imagePath);
     const res = await fetch(`${this.baseUrl}/ai/enhance`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ imagePath, mode, intensity }),
+      body: JSON.stringify({ imagePath: targetPath, mode, intensity }),
     });
 
     if (!res.ok) {
@@ -180,7 +225,7 @@ export class AIEngineService {
     }
 
     const data: AIEnhanceResult = await res.json();
-    if (data.downloadUrl && !data.fullUrl) {
+    if (data.downloadUrl) {
       data.fullUrl = `${this.baseUrl}${data.downloadUrl}`;
     }
     return data;
@@ -194,10 +239,14 @@ export class AIEngineService {
     bpm?: number,
     durationSec?: number
   ): Promise<AIAudioBeatResult> {
+    let targetPath = mediaPath;
+    if (mediaPath) {
+      targetPath = await this.uploadIfLocalMedia(mediaPath);
+    }
     const res = await fetch(`${this.baseUrl}/ai/detect-beats`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ mediaPath, bpm, durationSec }),
+      body: JSON.stringify({ mediaPath: targetPath, bpm, durationSec }),
     });
 
     if (!res.ok) {

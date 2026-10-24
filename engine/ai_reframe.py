@@ -142,3 +142,4 @@ def calculate_smooth_reframe_keyframes(
         "requiredScale": round(scale, 3),
         "keyframes": smooth_points,
     }
+

@@ -12,13 +12,14 @@ import json
 import time
 import shutil
 import hashlib
+import base64
 import urllib.request
 import subprocess
 from pathlib import Path
 from typing import List, Dict, Any, Optional
 
 import imageio_ffmpeg
-from fastapi import FastAPI, HTTPException, BackgroundTasks, Query
+from fastapi import FastAPI, HTTPException, BackgroundTasks, Query, UploadFile, File
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, JSONResponse
 from pydantic import BaseModel, Field
@@ -40,13 +41,34 @@ CACHE_DIR.mkdir(parents=True, exist_ok=True)
 
 def resolve_media_path(path_or_url: str) -> str:
     """
-    Safely resolves local file path, file:// URI, or remote HTTP/HTTPS asset URL.
-    Downloads remote assets into CACHE_DIR so AI OpenCV/FFmpeg algorithms can process them.
+    Safely resolves local file path, file:// URI, server cached path, base64 data, or remote asset URL.
+    Ensures images from mobile devices (iOS / Android) or web URLs are accessible on the host machine.
     """
     if not path_or_url:
         raise HTTPException(status_code=400, detail="Empty media path")
 
-    # If it's a web URL, download and cache it locally
+    # 1. If it refers to an internal cached asset (e.g. /cache/cutout_123.png or http://...:8765/cache/cutout_123.png)
+    if "/cache/" in path_or_url:
+        filename = path_or_url.split("/cache/")[-1].split("?")[0]
+        cached_file = CACHE_DIR / filename
+        if cached_file.exists():
+            return str(cached_file)
+
+    # 2. If it's a base64 encoded data URI (sent from mobile)
+    if path_or_url.startswith("data:image/") or (len(path_or_url) > 200 and "," in path_or_url[:100]):
+        try:
+            raw_b64 = path_or_url.split(",", 1)[-1]
+            img_bytes = base64.b64decode(raw_b64)
+            ext = ".png" if "image/png" in path_or_url else ".jpg"
+            filename = f"b64_{int(time.time() * 1000)}{ext}"
+            cached_file = CACHE_DIR / filename
+            with open(cached_file, "wb") as f:
+                f.write(img_bytes)
+            return str(cached_file)
+        except Exception as e:
+            raise HTTPException(status_code=400, detail=f"Failed to decode base64 image: {str(e)}")
+
+    # 3. If it's an external web URL, download and cache it locally
     if path_or_url.startswith("http://") or path_or_url.startswith("https://"):
         url_hash = hashlib.md5(path_or_url.encode("utf-8")).hexdigest()[:12]
         ext = ".jpg"
@@ -64,15 +86,25 @@ def resolve_media_path(path_or_url: str) -> str:
                 shutil.copyfileobj(resp, out)
         return str(cached_file)
 
+    # 4. Local file paths on the host machine
     clean = path_or_url.replace("file://", "")
     # Normalize Windows leading slashes: /C:/work/... -> C:/work/...
     if clean.startswith("/") and len(clean) > 2 and clean[2] == ":":
         clean = clean[1:]
 
-    if not os.path.exists(clean):
-        raise HTTPException(status_code=400, detail=f"Media file not found at: {clean}")
+    # Check if file exists as-is
+    if os.path.exists(clean):
+        return clean
 
-    return clean
+    # Check if it was saved in CACHE_DIR without the cache/ prefix
+    basename = Path(clean).name
+    if (CACHE_DIR / basename).exists():
+        return str(CACHE_DIR / basename)
+
+    raise HTTPException(
+        status_code=400,
+        detail=f"Media file '{path_or_url}' not found on server host. Ensure file is uploaded via /ai/upload or provided as a URL.",
+    )
 
 
 app = FastAPI(
@@ -341,6 +373,26 @@ def download_export(filename: str):
 
 
 # -------------------- AI ENDPOINTS --------------------
+
+
+@app.post("/ai/upload")
+async def api_upload_media(file: UploadFile = File(...)):
+    """
+    Accepts media uploads (photos, videos, audio) from physical mobile devices (iPhone, Android).
+    Saves file into CACHE_DIR and returns download URL for subsequent AI operations.
+    """
+    orig_name = file.filename or "upload.jpg"
+    ext = Path(orig_name).suffix or ".jpg"
+    filename = f"upload_{int(time.time() * 1000)}{ext}"
+    dest = CACHE_DIR / filename
+    with open(dest, "wb") as out:
+        shutil.copyfileobj(file.file, out)
+    return {
+        "status": "success",
+        "filename": filename,
+        "downloadUrl": f"/cache/{filename}",
+        "fullUrl": f"/cache/{filename}",
+    }
 
 
 @app.post("/ai/remove-bg")

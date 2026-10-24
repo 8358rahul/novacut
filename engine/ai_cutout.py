@@ -80,3 +80,4 @@ def remove_background(
         "foregroundBoundingBox": {"x": bx, "y": by, "width": bw, "height": bh},
         "foregroundCoverageRatio": round(fg_ratio, 4),
     }
+
