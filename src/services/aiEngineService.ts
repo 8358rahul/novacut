@@ -118,15 +118,22 @@ export class AIEngineService {
     }
 
     try {
-      // Local device file URI (file:///var/mobile/..., ph://, content://, etc.)
+      // Local device file URI (file:///var/mobile/..., ph://, content://, blob:..., etc.)
       const formData = new FormData();
       const ext = uri.toLowerCase().includes('.png') ? 'png' : 'jpg';
       const mime = ext === 'png' ? 'image/png' : 'image/jpeg';
-      formData.append('file', {
-        uri,
-        name: `upload_${Date.now()}.${ext}`,
-        type: mime,
-      } as any);
+
+      if (uri.startsWith('blob:') && typeof fetch !== 'undefined') {
+        const blobRes = await fetch(uri);
+        const blob = await blobRes.blob();
+        formData.append('file', blob, `web_upload_${Date.now()}.${ext}`);
+      } else {
+        formData.append('file', {
+          uri,
+          name: `upload_${Date.now()}.${ext}`,
+          type: mime,
+        } as any);
+      }
 
       const res = await fetch(`${this.baseUrl}/ai/upload`, {
         method: 'POST',

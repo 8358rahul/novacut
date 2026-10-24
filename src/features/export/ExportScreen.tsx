@@ -198,6 +198,10 @@ export const ExportScreen: React.FC<ExportScreenProps> = ({
   const handleShareVideo = async () => {
     if (!outputPath) return;
     try {
+      if (typeof window !== 'undefined' && outputPath.startsWith('http')) {
+        window.open(outputPath, '_blank');
+        return;
+      }
       const isAvailable = await Sharing.isAvailableAsync();
       if (isAvailable) {
         await Sharing.shareAsync(outputPath, {
