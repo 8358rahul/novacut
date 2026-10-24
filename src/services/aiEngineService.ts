@@ -4,8 +4,20 @@
  * Provides AI Cutout, Smart Reframe, CLAHE HDR Enhancement, and Audio Beat Detection.
  */
 
-// Safely resolve default endpoint for Android Emulator vs iOS / Localhost
+// Safely resolve default endpoint for Physical iOS Device, Android Emulator, or Localhost
 export function getDefaultEngineUrl(): string {
+  try {
+    // Dynamically check Expo hostUri so real physical iOS/Android devices connect to dev machine IP
+    const Constants = require('expo-constants')?.default;
+    const hostUri = Constants?.expoConfig?.hostUri || Constants?.manifest2?.extra?.expoClient?.hostUri;
+    if (hostUri) {
+      const hostIp = hostUri.split(':')[0];
+      if (hostIp && hostIp !== 'localhost' && hostIp !== '127.0.0.1') {
+        return `http://${hostIp}:8765`;
+      }
+    }
+  } catch {}
+
   try {
     // Dynamically check React Native platform if available
     const RN = require('react-native');
