@@ -66,7 +66,7 @@ export const TemplatesScreen: React.FC<TemplatesScreenProps> = ({
       slotIndex: idx,
       uri: 'https://images.unsplash.com/photo-1518709268805-4e9042af9f23?auto=format&fit=crop&w=1200&q=80',
       title: `${s.label}`,
-      type: s.requiredType === 'image' ? 'image' : 'video',
+      type: 'image',
     }));
     setSelectedSlots(initialSlots);
   };

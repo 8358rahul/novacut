@@ -33,6 +33,39 @@ export class MemoryStorageDriver implements StorageDriver {
   }
 }
 
+export class WebLocalStorageDriver implements StorageDriver {
+  private memoryFallback = new Map<string, string>();
+
+  async getItem(key: string): Promise<string | null> {
+    try {
+      if (typeof window !== 'undefined' && window.localStorage) {
+        return window.localStorage.getItem(key);
+      }
+    } catch {}
+    return this.memoryFallback.get(key) || null;
+  }
+
+  async setItem(key: string, value: string): Promise<void> {
+    try {
+      if (typeof window !== 'undefined' && window.localStorage) {
+        window.localStorage.setItem(key, value);
+        return;
+      }
+    } catch {}
+    this.memoryFallback.set(key, value);
+  }
+
+  async removeItem(key: string): Promise<void> {
+    try {
+      if (typeof window !== 'undefined' && window.localStorage) {
+        window.localStorage.removeItem(key);
+        return;
+      }
+    } catch {}
+    this.memoryFallback.delete(key);
+  }
+}
+
 const PROJECTS_INDEX_KEY = 'novacut_projects_index';
 const PROJECT_PREFIX = 'novacut_project_';
 
@@ -206,4 +239,11 @@ export class ProjectStorage {
   }
 }
 
-export const defaultProjectStorage = new ProjectStorage();
+function createDefaultDriver(): StorageDriver {
+  if (typeof window !== 'undefined' && typeof window.localStorage !== 'undefined') {
+    return new WebLocalStorageDriver();
+  }
+  return new MemoryStorageDriver();
+}
+
+export const defaultProjectStorage = new ProjectStorage(createDefaultDriver());

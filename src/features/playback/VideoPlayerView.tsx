@@ -17,7 +17,7 @@ export interface VideoPlayerViewProps {
   onImportPress?: () => void;
 }
 
-const isImageUri = (uri?: string): boolean => {
+export const isImageUri = (uri?: string): boolean => {
   if (!uri) return false;
   const clean = uri.toLowerCase().split('?')[0];
   return (
@@ -26,7 +26,8 @@ const isImageUri = (uri?: string): boolean => {
     clean.endsWith('.png') ||
     clean.endsWith('.webp') ||
     clean.endsWith('.gif') ||
-    clean.includes('image')
+    clean.includes('image') ||
+    clean.includes('unsplash')
   );
 };
 

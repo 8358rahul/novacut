@@ -9,6 +9,7 @@ import {
   Modal,
   Alert,
   ActivityIndicator,
+  Platform,
 } from 'react-native';
 import { colors, spacing, borderRadius } from '../../theme';
 import { Header } from '../../components/Header';
@@ -35,7 +36,7 @@ import {
 } from '../../core/timeline/calculator';
 import { getInterpolatedTransform } from '../../core/timeline/keyframes';
 import { defaultAIEngineService } from '../../services/aiEngineService';
-import { VideoPlayerView } from '../playback/VideoPlayerView';
+import { VideoPlayerView, isImageUri } from '../playback/VideoPlayerView';
 import { pickVideoFromStorage } from '../../services/mediaImport';
 import { FilterModal } from '../effects/FilterModal';
 import { TransitionModal } from '../transitions/TransitionModal';
@@ -45,6 +46,7 @@ import { SpeedCurveModal } from './SpeedCurveModal';
 import { BlendModeModal } from './BlendModeModal';
 import { SplitScreenModal } from './SplitScreenModal';
 import { LUT_FILTERS_CATALOG, VISUAL_EFFECTS_CATALOG } from '../../core/effects/effectRegistry';
+import { VIRAL_TEMPLATES, compileProjectFromTemplate } from '../../core/templates/templateEngine';
 import { useGuaranteedInsets } from '../../navigation/safeArea';
 
 export interface EditorScreenProps {
@@ -53,6 +55,7 @@ export interface EditorScreenProps {
   onExport: (projectId: string) => void;
 }
 
+const TRACK_HEADER_WIDTH = 64;
 const PIXELS_PER_SEC_DEFAULT = 60; // 60px per second on default zoom
 const WAVEFORM_PREVIEW_HEIGHTS = [4, 7, 10, 6, 9, 12, 8, 5, 11, 13, 7, 4] as const;
 
@@ -92,7 +95,25 @@ export const EditorScreen: React.FC<EditorScreenProps> = ({
   // Load project on mount and restore asset URIs
   useEffect(() => {
     async function load() {
-      const p = await defaultProjectStorage.loadProject(projectId);
+      let p = await defaultProjectStorage.loadProject(projectId);
+      if (!p) {
+        // Fallback: If project not found in storage or opening directly, synthesize template project
+        const matchedTpl =
+          VIRAL_TEMPLATES.find(
+            (t) => t.id === projectId || projectId.includes(t.id) || projectId.toLowerCase().includes('tiktok')
+          ) || VIRAL_TEMPLATES[0];
+
+        if (matchedTpl) {
+          p = compileProjectFromTemplate(matchedTpl, []);
+          p.metadata.id = projectId;
+          await defaultProjectStorage.saveProject(p);
+        } else {
+          p = defaultProjectStorage.createProject('NovaCut Project');
+          p.metadata.id = projectId;
+          await defaultProjectStorage.saveProject(p);
+        }
+      }
+
       if (p) {
         setProject(p);
         const initial = createInitialTimelineState(p);
@@ -198,38 +219,64 @@ export const EditorScreen: React.FC<EditorScreenProps> = ({
     [engine, state, isPlaying, activeMediaClip, durationUs]
   );
 
-  // Handle Playback Simulation Loop (only for photos, titles, gaps where native video player is not running)
+  // Handle Unified Playback Engine (Delta clock for photos, templates, audio, web, and gaps)
   useEffect(() => {
-    if (isPlaying && engine && state) {
-      if (activeMediaClip?.type === 'video' && activeVideoUri) {
-        return; // Hardware video player drives smooth 60fps playback via onPlaybackTimeUpdate
+    if (!isPlaying || !engine) {
+      if (playTimerRef.current) {
+        clearInterval(playTimerRef.current);
+        playTimerRef.current = null;
       }
-
-      playTimerRef.current = setInterval(() => {
-        const duration = calculateProjectDurationUs(state.clips);
-        if (duration === 0) {
-          setIsPlaying(false);
-          return;
-        }
-
-        const nextPlayhead = state.playheadUs + 33_333; // 30fps tick
-        if (nextPlayhead >= duration) {
-          engine.setPlayhead(0);
-          setState({ ...engine.getState() });
-          setIsPlaying(false);
-        } else {
-          engine.setPlayhead(nextPlayhead);
-          setState({ ...engine.getState() });
-        }
-      }, 33);
-    } else {
-      if (playTimerRef.current) clearInterval(playTimerRef.current);
+      return;
     }
 
+    const isActualHardwareVideo =
+      Platform.OS !== 'web' &&
+      activeMediaClip?.type === 'video' &&
+      activeVideoUri &&
+      !isImageUri(activeVideoUri);
+
+    if (isActualHardwareVideo) {
+      // Hardware video player on native mobile drives smooth playback via handlePlaybackTimeUpdate
+      if (playTimerRef.current) {
+        clearInterval(playTimerRef.current);
+        playTimerRef.current = null;
+      }
+      return;
+    }
+
+    let lastTime = Date.now();
+    playTimerRef.current = setInterval(() => {
+      const now = Date.now();
+      const elapsedMs = Math.min(now - lastTime, 100);
+      lastTime = now;
+
+      const currentState = engine.getState();
+      const totalDuration = calculateProjectDurationUs(currentState.clips);
+      if (totalDuration === 0) {
+        setIsPlaying(false);
+        return;
+      }
+
+      const advanceUs = Math.round(elapsedMs * 1000);
+      const nextPlayhead = currentState.playheadUs + advanceUs;
+
+      if (nextPlayhead >= totalDuration) {
+        engine.setPlayhead(0);
+        setState({ ...engine.getState() });
+        setIsPlaying(false);
+      } else {
+        engine.setPlayhead(nextPlayhead);
+        setState({ ...engine.getState() });
+      }
+    }, 33);
+
     return () => {
-      if (playTimerRef.current) clearInterval(playTimerRef.current);
+      if (playTimerRef.current) {
+        clearInterval(playTimerRef.current);
+        playTimerRef.current = null;
+      }
     };
-  }, [isPlaying, engine, state?.playheadUs, activeMediaClip?.type, activeVideoUri]);
+  }, [isPlaying, engine, activeMediaClip?.type, activeVideoUri]);
 
   const rulerMarks = useMemo(() => {
     const count = Math.ceil(durationUs / MICROS_PER_SECOND) + 8;
@@ -241,8 +288,17 @@ export const EditorScreen: React.FC<EditorScreenProps> = ({
 
   // Actions
   const handleTogglePlay = useCallback(() => {
-    setIsPlaying((prev) => !prev);
-  }, []);
+    setIsPlaying((prev) => {
+      if (!prev && engine) {
+        const currentUs = engine.getState().playheadUs;
+        if (durationUs > 0 && currentUs >= durationUs) {
+          engine.setPlayhead(0);
+          setState({ ...engine.getState() });
+        }
+      }
+      return !prev;
+    });
+  }, [engine, durationUs]);
 
   const handleSeek = useCallback(
     (timeUs: number) => {
@@ -547,10 +603,36 @@ export const EditorScreen: React.FC<EditorScreenProps> = ({
     () =>
       Math.max(
         Dimensions.get('window').width,
-        timeUsToPixels(durationUs + secondsToMicros(6), pixelsPerSec)
+        TRACK_HEADER_WIDTH + timeUsToPixels(durationUs + secondsToMicros(6), pixelsPerSec)
       ),
     [durationUs, pixelsPerSec]
   );
+
+  const playheadPixelX = useMemo(
+    () => timeUsToPixels(state?.playheadUs || 0, pixelsPerSec),
+    [state?.playheadUs, pixelsPerSec]
+  );
+
+  // Auto-scroll timeline to follow playhead during playback
+  useEffect(() => {
+    if (!isPlaying || !timelineScrollRef.current) return;
+    const windowWidth = Dimensions.get('window').width;
+    const absolutePlayheadX = TRACK_HEADER_WIDTH + playheadPixelX;
+    if (absolutePlayheadX > windowWidth * 0.75) {
+      timelineScrollRef.current.scrollTo({
+        x: Math.max(0, absolutePlayheadX - windowWidth * 0.35),
+        animated: false,
+      });
+    }
+  }, [isPlaying, playheadPixelX]);
+
+  // Scroll back to start when playhead resets to 0
+  useEffect(() => {
+    if (!timelineScrollRef.current) return;
+    if (playheadPixelX === 0) {
+      timelineScrollRef.current.scrollTo({ x: 0, animated: true });
+    }
+  }, [playheadPixelX]);
 
   const isKeyframeAtPlayhead = useMemo(() => {
     if (!selectedClip || (selectedClip.type !== 'video' && selectedClip.type !== 'image')) return false;
@@ -653,8 +735,6 @@ export const EditorScreen: React.FC<EditorScreenProps> = ({
       </View>
     );
   }
-
-  const playheadPixelX = timeUsToPixels(state.playheadUs, pixelsPerSec);
 
   return (
     <View style={styles.container}>
@@ -806,20 +886,34 @@ export const EditorScreen: React.FC<EditorScreenProps> = ({
           horizontal
           showsHorizontalScrollIndicator
           style={styles.timelineScrollView}
-          contentContainerStyle={{ width: timelineWidth }}
+          contentContainerStyle={[
+            styles.timelineScrollContent,
+            { width: timelineWidth },
+          ]}
         >
           {/* Timeline Ruler */}
           <TouchableOpacity
             activeOpacity={1}
             style={styles.ruler}
             onPress={(e) => {
-              const x = e.nativeEvent.locationX;
-              const targetUs = pixelsToTimeUs(x, pixelsPerSec);
-              handleSeek(targetUs);
+              const x = e.nativeEvent.locationX - TRACK_HEADER_WIDTH;
+              if (x >= 0) {
+                const targetUs = pixelsToTimeUs(x, pixelsPerSec);
+                handleSeek(targetUs);
+              }
             }}
           >
+            <View style={styles.rulerHeader}>
+              <Text style={styles.rulerHeaderText}>⏱️ TIME</Text>
+            </View>
             {rulerMarks.map((mark) => (
-              <View key={mark.index} style={[styles.rulerMark, { left: mark.left }]}>
+              <View
+                key={mark.index}
+                style={[
+                  styles.rulerMark,
+                  { left: TRACK_HEADER_WIDTH + mark.left },
+                ]}
+              >
                 <Text style={styles.rulerText}>{mark.index}s</Text>
                 <View style={styles.rulerTick} />
                 <View style={[styles.rulerSubTick, { left: 15 }]} />
@@ -836,12 +930,40 @@ export const EditorScreen: React.FC<EditorScreenProps> = ({
                 .map((id) => state.clips[id])
                 .filter(Boolean);
 
+              const trackIcon =
+                track.type === 'video'
+                  ? '🎬'
+                  : track.type === 'audio'
+                  ? '🎵'
+                  : track.type === 'text'
+                  ? '📝'
+                  : '🔲';
+              const trackLabel =
+                track.type === 'video'
+                  ? 'Video'
+                  : track.type === 'audio'
+                  ? 'Audio'
+                  : track.type === 'text'
+                  ? 'Text'
+                  : 'Overlay';
+
               return (
                 <View key={track.id} style={styles.trackRow}>
                   <View style={styles.trackLabel}>
-                    <Text style={styles.trackLabelText}>{track.name}</Text>
+                    <Text style={styles.trackLabelIcon}>{trackIcon}</Text>
+                    <Text style={styles.trackLabelText} numberOfLines={1}>
+                      {trackLabel}
+                    </Text>
                   </View>
-                  <View style={styles.trackContent}>
+                  <TouchableOpacity
+                    activeOpacity={1}
+                    style={styles.trackContent}
+                    onPress={(e) => {
+                      const x = e.nativeEvent.locationX;
+                      const targetUs = pixelsToTimeUs(x, pixelsPerSec);
+                      handleSeek(targetUs);
+                    }}
+                  >
                     {trackClips.map((clip, clipIndex) => {
                       const left = timeUsToPixels(
                         clip.timelineRange.startUs,
@@ -913,14 +1035,20 @@ export const EditorScreen: React.FC<EditorScreenProps> = ({
                         </React.Fragment>
                       );
                     })}
-                  </View>
+                  </TouchableOpacity>
                 </View>
               );
             })}
           </View>
 
           {/* Central Playhead Needle (Obsidian & Gold) */}
-          <View style={[styles.playheadNeedle, { left: playheadPixelX }]}>
+          <View
+            style={[
+              styles.playheadNeedle,
+              { left: TRACK_HEADER_WIDTH + playheadPixelX },
+            ]}
+            pointerEvents="none"
+          >
             <View style={styles.playheadHead} />
             <View style={styles.playheadLine} />
           </View>
@@ -1545,12 +1673,34 @@ const styles = StyleSheet.create({
   timelineScrollView: {
     flex: 1,
   },
+  timelineScrollContent: {
+    position: 'relative',
+    minHeight: '100%',
+    flexDirection: 'column',
+  },
   ruler: {
-    height: 24,
+    height: 26,
     backgroundColor: colors.timelineRuler,
     borderBottomWidth: 1,
     borderBottomColor: colors.timelineGrid,
     position: 'relative',
+    flexDirection: 'row',
+  },
+  rulerHeader: {
+    width: TRACK_HEADER_WIDTH,
+    height: '100%',
+    backgroundColor: colors.surface,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderRightWidth: 1,
+    borderRightColor: colors.border,
+    zIndex: 3,
+  },
+  rulerHeaderText: {
+    color: colors.textMuted,
+    fontSize: 9,
+    fontWeight: 'bold',
+    letterSpacing: 0.5,
   },
   rulerMark: {
     position: 'absolute',
@@ -1563,14 +1713,14 @@ const styles = StyleSheet.create({
     fontSize: 9,
     position: 'absolute',
     top: 2,
-    left: 2,
+    left: 3,
   },
   rulerTick: {
     position: 'absolute',
     bottom: 0,
     left: 0,
     width: 1,
-    height: 8,
+    height: 9,
     backgroundColor: colors.textMuted,
   },
   rulerSubTick: {
@@ -1592,7 +1742,7 @@ const styles = StyleSheet.create({
     position: 'relative',
   },
   trackLabel: {
-    width: 44,
+    width: TRACK_HEADER_WIDTH,
     height: '100%',
     backgroundColor: colors.surface,
     alignItems: 'center',
@@ -1600,11 +1750,16 @@ const styles = StyleSheet.create({
     borderRightWidth: 1,
     borderRightColor: colors.border,
     zIndex: 2,
+    paddingHorizontal: 2,
+    gap: 2,
+  },
+  trackLabelIcon: {
+    fontSize: 14,
   },
   trackLabelText: {
     color: colors.textMuted,
     fontSize: 9,
-    fontWeight: 'bold',
+    fontWeight: '700',
     textTransform: 'uppercase',
   },
   trackContent: {
@@ -1705,21 +1860,35 @@ const styles = StyleSheet.create({
     position: 'absolute',
     top: 0,
     bottom: 0,
-    width: 1,
-    zIndex: 10,
+    height: '100%',
+    width: 24,
+    marginLeft: -12,
+    zIndex: 100,
     alignItems: 'center',
+    pointerEvents: 'none',
   },
   playheadHead: {
-    width: 12,
-    height: 12,
+    width: 14,
+    height: 14,
     backgroundColor: colors.accentGold,
+    borderWidth: 1.5,
+    borderColor: '#FFFFFF',
+    borderRadius: 2,
     transform: [{ rotate: '45deg' }],
-    marginTop: 2,
+    marginTop: 4,
+    shadowColor: '#000000',
+    shadowOpacity: 0.8,
+    shadowRadius: 3,
+    elevation: 6,
   },
   playheadLine: {
-    width: 1.5,
+    width: 2,
     flex: 1,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: colors.accentGold,
+    shadowColor: '#000000',
+    shadowOpacity: 0.8,
+    shadowRadius: 2,
+    elevation: 4,
   },
   dockContainer: {
     height: 68,

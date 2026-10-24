@@ -283,11 +283,23 @@ export function compileProjectFromTemplate(
   const assetsMap: Record<string, MediaAsset> = {};
 
   template.slots.forEach((slot, index) => {
-    const userMedia = selectedMedia.find((m) => m.slotIndex === index) || {
+    const rawUserMedia = selectedMedia.find((m) => m.slotIndex === index);
+    const demoUri = 'https://images.unsplash.com/photo-1518709268805-4e9042af9f23?auto=format&fit=crop&w=1200&q=80';
+    const effectiveUri = rawUserMedia?.uri || demoUri;
+    const isImageMedia =
+      rawUserMedia?.type === 'image' ||
+      slot.requiredType === 'image' ||
+      (!rawUserMedia && true) ||
+      effectiveUri.toLowerCase().includes('unsplash') ||
+      effectiveUri.toLowerCase().endsWith('.jpg') ||
+      effectiveUri.toLowerCase().endsWith('.jpeg') ||
+      effectiveUri.toLowerCase().endsWith('.png');
+
+    const userMedia: UserSelectedMediaSlot = {
       slotIndex: index,
-      uri: 'https://images.unsplash.com/photo-1518709268805-4e9042af9f23?auto=format&fit=crop&w=1200&q=80',
-      title: `${slot.label} (Demo)`,
-      type: slot.requiredType === 'image' ? 'image' : 'video',
+      uri: effectiveUri,
+      title: rawUserMedia?.title || `${slot.label} (Demo)`,
+      type: isImageMedia ? 'image' : 'video',
     };
 
     const clipId = `clip_tpl_${index}_${Date.now()}`;
