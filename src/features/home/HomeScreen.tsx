@@ -218,9 +218,10 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
   };
 
   return (
-    <View style={styles.container}>
-      {/* Top Brand & Search Bar Header */}
-      <View style={[styles.topBar, { paddingTop: insets.top + spacing.xs }]}>
+    <View className="flex-1 bg-background w-full items-center">
+      <View className="w-full max-w-4xl flex-1">
+        {/* Top Brand & Search Bar Header */}
+        <View style={[styles.topBar, { paddingTop: insets.top + spacing.xs }]}>
         <View style={styles.brandRow}>
           <Text style={styles.brandName}>NOVACUT</Text>
           <View style={styles.proBadge}>
@@ -364,42 +365,46 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
           ))}
         </View>
       </ScrollView>
+      </View>
 
       {/* CapCut-Style Bottom Navigation Bar (rendered when standalone) */}
       {!hideBottomBar && (
-        <View
-          style={[
-            styles.bottomTabBar,
-            {
-              paddingBottom: insets.bottom,
-              height: 58 + insets.bottom,
-            },
-          ]}
-        >
-          <TouchableOpacity style={styles.bottomTabActive}>
-            <Text style={styles.bottomTabIcon}>✂️</Text>
-            <Text style={styles.bottomTabLabelActive}>Edit</Text>
-          </TouchableOpacity>
+        <View className="w-full items-center bg-zinc-900 border-t border-zinc-800">
+          <View
+            style={[
+              styles.bottomTabBar,
+              {
+                paddingBottom: insets.bottom,
+                height: 58 + insets.bottom,
+              },
+            ]}
+            className="w-full max-w-4xl"
+          >
+            <TouchableOpacity style={styles.bottomTabActive}>
+              <Text style={styles.bottomTabIcon}>✂️</Text>
+              <Text style={styles.bottomTabLabelActive}>Edit</Text>
+            </TouchableOpacity>
 
-          <TouchableOpacity style={styles.bottomTab} onPress={onOpenTemplates}>
-            <Text style={styles.bottomTabIcon}>🪄</Text>
-            <Text style={styles.bottomTabLabel}>Templates</Text>
-          </TouchableOpacity>
+            <TouchableOpacity style={styles.bottomTab} onPress={onOpenTemplates}>
+              <Text style={styles.bottomTabIcon}>🪄</Text>
+              <Text style={styles.bottomTabLabel}>Templates</Text>
+            </TouchableOpacity>
 
-          <TouchableOpacity style={styles.bottomTab} onPress={() => setPhotoModalVisible(true)}>
-            <Text style={styles.bottomTabIcon}>📸</Text>
-            <Text style={styles.bottomTabLabel}>Photos</Text>
-          </TouchableOpacity>
+            <TouchableOpacity style={styles.bottomTab} onPress={() => setPhotoModalVisible(true)}>
+              <Text style={styles.bottomTabIcon}>📸</Text>
+              <Text style={styles.bottomTabLabel}>Photos</Text>
+            </TouchableOpacity>
 
-          <TouchableOpacity style={styles.bottomTab} onPress={onOpenSearch}>
-            <Text style={styles.bottomTabIcon}>🔍</Text>
-            <Text style={styles.bottomTabLabel}>Discover</Text>
-          </TouchableOpacity>
+            <TouchableOpacity style={styles.bottomTab} onPress={onOpenSearch}>
+              <Text style={styles.bottomTabIcon}>🔍</Text>
+              <Text style={styles.bottomTabLabel}>Discover</Text>
+            </TouchableOpacity>
 
-          <TouchableOpacity style={styles.bottomTab} onPress={onOpenSettings}>
-            <Text style={styles.bottomTabIcon}>⚙️</Text>
-            <Text style={styles.bottomTabLabel}>Settings</Text>
-          </TouchableOpacity>
+            <TouchableOpacity style={styles.bottomTab} onPress={onOpenSettings}>
+              <Text style={styles.bottomTabIcon}>⚙️</Text>
+              <Text style={styles.bottomTabLabel}>Settings</Text>
+            </TouchableOpacity>
+          </View>
         </View>
       )}
 

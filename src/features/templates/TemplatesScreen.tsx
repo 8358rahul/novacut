@@ -160,8 +160,9 @@ export const TemplatesScreen: React.FC<TemplatesScreenProps> = ({
   };
 
   return (
-    <View style={styles.container}>
-      <Header
+    <View className="flex-1 bg-background w-full items-center">
+      <View className="w-full max-w-4xl flex-1">
+        <Header
         title="Viral Templates"
         onBack={onBack}
         rightAction={
@@ -309,6 +310,7 @@ export const TemplatesScreen: React.FC<TemplatesScreenProps> = ({
           </View>
         </Modal>
       )}
+      </View>
     </View>
   );
 };

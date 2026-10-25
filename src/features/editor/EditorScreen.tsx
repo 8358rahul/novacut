@@ -48,6 +48,8 @@ import { SplitScreenModal } from './SplitScreenModal';
 import { LUT_FILTERS_CATALOG, VISUAL_EFFECTS_CATALOG } from '../../core/effects/effectRegistry';
 import { VIRAL_TEMPLATES, compileProjectFromTemplate } from '../../core/templates/templateEngine';
 import { useGuaranteedInsets } from '../../navigation/safeArea';
+import { AnimatedPlayhead, LottieAudioVisualizer } from '../../components/animations';
+import { tw, useResponsive } from '../../theme';
 
 export interface EditorScreenProps {
   projectId: string;
@@ -582,21 +584,23 @@ export const EditorScreen: React.FC<EditorScreenProps> = ({
   );
 
   // Rendering aspect ratio styles
+  const { isDesktop, isTablet } = useResponsive();
   const currentRatio = project?.settings.aspectRatio || '9:16';
   const playerViewportStyle = useMemo(() => {
+    const baseHeight = isDesktop ? 350 : isTablet ? 280 : 230;
     switch (currentRatio) {
       case '9:16':
-        return { aspectRatio: 9 / 16, height: 230 };
+        return { aspectRatio: 9 / 16, height: baseHeight };
       case '16:9':
-        return { aspectRatio: 16 / 9, height: 180 };
+        return { aspectRatio: 16 / 9, height: Math.round(baseHeight * 0.78) };
       case '1:1':
-        return { aspectRatio: 1, height: 210 };
+        return { aspectRatio: 1, height: Math.round(baseHeight * 0.9) };
       case '4:5':
-        return { aspectRatio: 4 / 5, height: 220 };
+        return { aspectRatio: 4 / 5, height: Math.round(baseHeight * 0.95) };
       default:
-        return { aspectRatio: 9 / 16, height: 230 };
+        return { aspectRatio: 9 / 16, height: baseHeight };
     }
-  }, [currentRatio]);
+  }, [currentRatio, isDesktop, isTablet]);
 
   // Timeline UI rendering
   const timelineWidth = useMemo(
@@ -633,6 +637,52 @@ export const EditorScreen: React.FC<EditorScreenProps> = ({
       timelineScrollRef.current.scrollTo({ x: 0, animated: true });
     }
   }, [playheadPixelX]);
+
+  // Desktop Web Keyboard Shortcuts: Space (Play/Pause), Left/Right (Frame Step), Home/End, S (Split), Del (Delete), Ctrl+Z (Undo), Ctrl+Y (Redo)
+  useEffect(() => {
+    if (Platform.OS !== 'web' || typeof window === 'undefined') return;
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      const target = e.target as HTMLElement | null;
+      if (target && (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable)) {
+        return;
+      }
+
+      if (e.code === 'Space') {
+        e.preventDefault();
+        handleTogglePlay();
+      } else if (e.code === 'ArrowLeft') {
+        e.preventDefault();
+        handleStepFrame(-1);
+      } else if (e.code === 'ArrowRight') {
+        e.preventDefault();
+        handleStepFrame(1);
+      } else if (e.code === 'Home') {
+        e.preventDefault();
+        handleSeek(0);
+      } else if (e.code === 'End') {
+        e.preventDefault();
+        handleSeek(durationUs);
+      } else if (e.code === 'KeyS' && !e.ctrlKey && !e.metaKey) {
+        e.preventDefault();
+        handleSplit();
+      } else if ((e.code === 'Delete' || e.code === 'Backspace') && !e.ctrlKey && !e.metaKey) {
+        e.preventDefault();
+        handleDelete();
+      } else if (e.code === 'KeyZ' && (e.ctrlKey || e.metaKey) && !e.shiftKey) {
+        e.preventDefault();
+        handleUndo();
+      } else if ((e.code === 'KeyY' && (e.ctrlKey || e.metaKey)) || (e.code === 'KeyZ' && (e.ctrlKey || e.metaKey) && e.shiftKey)) {
+        e.preventDefault();
+        handleRedo();
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [handleTogglePlay, handleStepFrame, handleSeek, durationUs, handleSplit, handleDelete, handleUndo, handleRedo]);
 
   const isKeyframeAtPlayhead = useMemo(() => {
     if (!selectedClip || (selectedClip.type !== 'video' && selectedClip.type !== 'image')) return false;
@@ -829,7 +879,18 @@ export const EditorScreen: React.FC<EditorScreenProps> = ({
           <TouchableOpacity style={styles.transportBtn} onPress={() => handleStepFrame(1)}>
             <Text style={styles.transportIcon}>▶|</Text>
           </TouchableOpacity>
+
+          <LottieAudioVisualizer isPlaying={isPlaying} maxHeight={18} barCount={6} />
         </View>
+
+        {/* Desktop Web Keyboard Shortcuts Pill */}
+        {isDesktop && (
+          <View className="flex-row items-center gap-2 bg-zinc-900 px-3 py-1 rounded-full border border-zinc-800">
+            <Text className="text-xs text-zinc-400 font-medium">
+              ⌨️ <Text className="text-white font-bold">Space</Text> Play · <Text className="text-white font-bold">S</Text> Split · <Text className="text-white font-bold">Del</Text> Delete · <Text className="text-white font-bold">◀/▶</Text> Frame
+            </Text>
+          </View>
+        )}
 
         {/* Keyframe & Split Quick Actions */}
         <View style={styles.quickActionsGroup}>
@@ -1041,17 +1102,11 @@ export const EditorScreen: React.FC<EditorScreenProps> = ({
             })}
           </View>
 
-          {/* Central Playhead Needle (Obsidian & Gold) */}
-          <View
-            style={[
-              styles.playheadNeedle,
-              { left: TRACK_HEADER_WIDTH + playheadPixelX },
-            ]}
-            pointerEvents="none"
-          >
-            <View style={styles.playheadHead} />
-            <View style={styles.playheadLine} />
-          </View>
+          {/* Central Playhead Needle (Obsidian & Gold) Powered by Reanimated */}
+          <AnimatedPlayhead
+            positionX={TRACK_HEADER_WIDTH + playheadPixelX}
+            isPlaying={isPlaying}
+          />
         </ScrollView>
       </View>
 

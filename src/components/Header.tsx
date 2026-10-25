@@ -8,6 +8,7 @@ export interface HeaderProps {
   subtitle?: string;
   onBack?: () => void;
   rightAction?: React.ReactNode;
+  className?: string;
 }
 
 export const Header: React.FC<HeaderProps> = ({
@@ -15,11 +16,12 @@ export const Header: React.FC<HeaderProps> = ({
   subtitle,
   onBack,
   rightAction,
+  className,
 }) => {
   const insets = useGuaranteedInsets();
 
   return (
-    <View style={[styles.headerContainer, { paddingTop: insets.top }]}>
+    <View className={className} style={[styles.headerContainer, { paddingTop: insets.top }]}>
       <View style={styles.headerBar}>
         <View style={styles.leftContainer}>
           {onBack ? (

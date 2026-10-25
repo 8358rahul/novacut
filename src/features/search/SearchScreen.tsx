@@ -121,8 +121,9 @@ export const SearchScreen: React.FC<SearchScreenProps> = ({
   };
 
   return (
-    <View style={styles.container}>
-      <Header title="Discover & Search" onBack={onBack} />
+    <View className="flex-1 bg-background w-full items-center">
+      <View className="w-full max-w-4xl flex-1">
+        <Header title="Discover & Search" onBack={onBack} />
 
       {/* CapCut-style Search Bar Input */}
       <View style={styles.searchBarContainer}>
@@ -250,6 +251,7 @@ export const SearchScreen: React.FC<SearchScreenProps> = ({
           }
         />
       )}
+      </View>
     </View>
   );
 };

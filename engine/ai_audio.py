@@ -81,24 +81,35 @@ def detect_audio_beats_and_waveforms(
     energy_diff = np.diff(energy, prepend=energy[0])
     energy_diff = np.maximum(0, energy_diff)  # Half-wave rectification
 
-    # Dynamic thresholding for beat drops
-    mean_onset = np.mean(energy_diff)
-    std_onset = np.std(energy_diff)
-    threshold = mean_onset + 1.25 * std_onset
+    # Dynamic thresholding for beat drops using SciPy Signal
+    mean_onset = float(np.mean(energy_diff))
+    std_onset = float(np.std(energy_diff))
+    threshold = mean_onset + 1.15 * std_onset
 
-    beat_frames = []
-    min_dist_frames = int(0.25 / 0.05)  # Minimum 250ms between beat drops
+    min_dist_frames = max(1, int(0.22 / 0.05))  # Minimum 220ms between rhythmic beat drops
 
-    last_beat = -min_dist_frames
-    for i in range(1, frame_count - 1):
-        if (
-            energy_diff[i] > threshold
-            and energy_diff[i] > energy_diff[i - 1]
-            and energy_diff[i] >= energy_diff[i + 1]
-            and (i - last_beat) >= min_dist_frames
-        ):
-            beat_frames.append(i)
-            last_beat = i
+    try:
+        import scipy.signal as signal
+        peaks, props = signal.find_peaks(
+            energy_diff,
+            height=threshold,
+            distance=min_dist_frames,
+            prominence=std_onset * 0.5,
+        )
+        beat_frames = peaks.tolist()
+    except Exception:
+        # Resilient fallback
+        beat_frames = []
+        last_beat = -min_dist_frames
+        for i in range(1, frame_count - 1):
+            if (
+                energy_diff[i] > threshold
+                and energy_diff[i] > energy_diff[i - 1]
+                and energy_diff[i] >= energy_diff[i + 1]
+                and (i - last_beat) >= min_dist_frames
+            ):
+                beat_frames.append(i)
+                last_beat = i
 
     # Convert beat frames to microseconds and seconds
     beat_drops: List[Dict[str, Any]] = []

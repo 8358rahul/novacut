@@ -123,9 +123,13 @@ export const PhotoEditorScreen: React.FC<PhotoEditorScreenProps> = ({
     updateState();
   };
 
+  const isDesktop = windowWidth > 768;
+  const maxAvailableWidth = Math.min(windowWidth - 32, isDesktop ? 600 : 380);
+  const effectiveCanvasHeight = isDesktop ? 400 : 330;
+
   const canvasDim = useMemo(() => {
-    return calculateCanvasDimensions(state.aspectRatio, windowWidth - 32, canvasAreaHeight);
-  }, [state.aspectRatio, windowWidth]);
+    return calculateCanvasDimensions(state.aspectRatio, maxAvailableWidth, effectiveCanvasHeight);
+  }, [state.aspectRatio, maxAvailableWidth, effectiveCanvasHeight]);
 
   const updateState = useCallback(() => {
     setState({ ...engine.getState() });
@@ -304,8 +308,9 @@ export const PhotoEditorScreen: React.FC<PhotoEditorScreenProps> = ({
   const currentRetouch = state.retouch || DEFAULT_PHOTO_RETOUCH;
 
   return (
-    <View style={styles.container}>
-      {/* Top Header */}
+    <View className="flex-1 bg-background w-full items-center">
+      <View className="w-full max-w-4xl flex-1">
+        {/* Top Header */}
       <Header
         title="Photo Studio"
         onBack={onBack}
@@ -1211,6 +1216,7 @@ export const PhotoEditorScreen: React.FC<PhotoEditorScreenProps> = ({
           </View>
         </View>
       </Modal>
+      </View>
     </View>
   );
 };

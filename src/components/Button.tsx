@@ -19,6 +19,8 @@ export interface ButtonProps {
   style?: ViewStyle;
   textStyle?: TextStyle;
   icon?: React.ReactNode;
+  className?: string;
+  textClassName?: string;
 }
 
 export const Button: React.FC<ButtonProps> = ({
@@ -31,6 +33,8 @@ export const Button: React.FC<ButtonProps> = ({
   style,
   textStyle,
   icon,
+  className,
+  textClassName,
 }) => {
   const getVariantStyle = () => {
     switch (variant) {
@@ -72,6 +76,7 @@ export const Button: React.FC<ButtonProps> = ({
 
   return (
     <TouchableOpacity
+      className={className}
       activeOpacity={0.75}
       onPress={onPress}
       disabled={disabled || loading}
@@ -88,7 +93,10 @@ export const Button: React.FC<ButtonProps> = ({
       ) : (
         <>
           {icon}
-          <Text style={[styles.text, { color: getTextColor() }, textStyle]}>
+          <Text
+            className={textClassName}
+            style={[styles.text, { color: getTextColor() }, textStyle]}
+          >
             {title}
           </Text>
         </>
