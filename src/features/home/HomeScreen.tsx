@@ -3,7 +3,6 @@ import {
   View,
   Text,
   StyleSheet,
-  FlatList,
   TouchableOpacity,
   ScrollView,
   Modal,
@@ -25,7 +24,6 @@ import { useGuaranteedInsets } from '../../navigation/safeArea';
 import {
   pickPhotoFromGallery,
   capturePhotoWithCamera,
-  pickVideoFromStorage,
 } from '../../services/mediaImport';
 
 export interface HomeScreenProps {

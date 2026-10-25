@@ -19,7 +19,6 @@ import {
   ExportResolutionPreset,
   ExportFpsPreset,
   ExportQualityPreset,
-  ExportSettings,
 } from '../../core/models/export';
 import { defaultProjectStorage } from '../../core/persistence/storage';
 import { formatTimecode } from '../../core/models/timeline';

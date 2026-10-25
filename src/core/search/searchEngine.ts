@@ -5,7 +5,7 @@
  * Video Effects, LUT Filters, Royalty-Free Audio Tracks, and Sticker packs.
  */
 
-import { VIRAL_TEMPLATES, TemplateDefinition } from '../templates/templateEngine';
+import { VIRAL_TEMPLATES } from '../templates/templateEngine';
 import { PHOTO_FILTERS } from '../photo/photoEngine';
 import { VISUAL_EFFECTS_CATALOG } from '../effects/effectRegistry';
 

@@ -7,13 +7,11 @@ import {
   TouchableOpacity,
   ScrollView,
 } from 'react-native';
-import { colors, spacing, borderRadius } from '../../theme';
+import { spacing, borderRadius } from '../../theme';
 import { ColorAdjustments } from '../../core/models/clip';
 import {
   LUT_FILTERS_CATALOG,
   VISUAL_EFFECTS_CATALOG,
-  LutFilterConfig,
-  VisualEffectConfig,
   VisualEffectType,
   VisualEffectCategory,
   LutFilterCategory,

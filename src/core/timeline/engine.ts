@@ -4,7 +4,6 @@ import {
   ColorAdjustments,
   Transition,
   TextOverlay,
-  AudioClip,
   Transform,
   BlendMode,
   KeyframeTrack,
@@ -22,8 +21,6 @@ import {
   splitClip,
   deleteClip,
   duplicateClip,
-  changeClipSpeed,
-  changeClipVolume,
   reorderClips,
   moveClip,
 } from './operations';

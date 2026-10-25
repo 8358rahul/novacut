@@ -13,7 +13,6 @@ import {
 } from 'react-native';
 import { colors, spacing, borderRadius } from '../../theme';
 import { Header } from '../../components/Header';
-import { IconButton } from '../../components/IconButton';
 import { Button } from '../../components/Button';
 import { Project, AspectRatio } from '../../core/models/project';
 import { Clip, VideoClip, AudioClip, TextOverlay, SpeedCurve, BlendMode, ImageClip, KeyframeTrack } from '../../core/models/clip';
@@ -45,11 +44,10 @@ import { SubtitleModal } from './SubtitleModal';
 import { SpeedCurveModal } from './SpeedCurveModal';
 import { BlendModeModal } from './BlendModeModal';
 import { SplitScreenModal } from './SplitScreenModal';
-import { LUT_FILTERS_CATALOG, VISUAL_EFFECTS_CATALOG } from '../../core/effects/effectRegistry';
+import { LUT_FILTERS_CATALOG } from '../../core/effects/effectRegistry';
 import { VIRAL_TEMPLATES, compileProjectFromTemplate } from '../../core/templates/templateEngine';
 import { useGuaranteedInsets } from '../../navigation/safeArea';
 import { AnimatedPlayhead, LottieAudioVisualizer } from '../../components/animations';
-import { tw, useResponsive } from '../../theme';
 
 export interface EditorScreenProps {
   projectId: string;
@@ -584,7 +582,9 @@ export const EditorScreen: React.FC<EditorScreenProps> = ({
   );
 
   // Rendering aspect ratio styles
-  const { isDesktop, isTablet } = useResponsive();
+  const windowWidth = Dimensions.get('window').width;
+  const isDesktop = Platform.OS === 'web' && windowWidth > 768;
+  const isTablet = windowWidth >= 768 && windowWidth <= 1024;
   const currentRatio = project?.settings.aspectRatio || '9:16';
   const playerViewportStyle = useMemo(() => {
     const baseHeight = isDesktop ? 350 : isTablet ? 280 : 230;

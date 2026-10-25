@@ -6,8 +6,8 @@
  */
 
 import { Project, AspectRatio, DEFAULT_PROJECT_SETTINGS } from '../models/project';
-import { VideoClip, ImageClip, Clip, AudioClip, TextOverlay, SpeedCurve, TransitionType, DEFAULT_TRANSFORM } from '../models/clip';
-import { TimelineTrack, secondsToMicros, MICROS_PER_SECOND } from '../models/timeline';
+import { VideoClip, ImageClip, AudioClip, TextOverlay, TransitionType, DEFAULT_TRANSFORM } from '../models/clip';
+import { MICROS_PER_SECOND } from '../models/timeline';
 import { DEFAULT_EXPORT_SETTINGS } from '../models/export';
 import { MediaAsset } from '../models/asset';
 

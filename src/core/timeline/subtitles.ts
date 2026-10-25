@@ -1,9 +1,5 @@
 import { TextOverlay, DEFAULT_TRANSFORM } from '../models/clip';
-import {
-  formatTimecode,
-  MICROS_PER_SECOND,
-  secondsToMicros,
-} from '../models/timeline';
+import { MICROS_PER_SECOND } from '../models/timeline';
 
 export interface SubtitleCue {
   index: number;

@@ -1,5 +1,5 @@
 import { Project } from '../models/project';
-import { ExportSettings, ExportJob } from '../models/export';
+import { ExportSettings } from '../models/export';
 import { Clip, VideoClip, AudioClip } from '../models/clip';
 import { microsToSeconds } from '../models/timeline';
 

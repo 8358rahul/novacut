@@ -1,6 +1,6 @@
 import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
-import { colors, spacing, borderRadius } from '../theme';
+import { colors, spacing } from '../theme';
 import { useGuaranteedInsets } from '../navigation/safeArea';
 
 export interface HeaderProps {

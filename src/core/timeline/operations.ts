@@ -1,4 +1,4 @@
-import { Clip, VideoClip, AudioClip, ImageClip } from '../models/clip';
+import { Clip, VideoClip, AudioClip } from '../models/clip';
 import { TimelineTrack } from '../models/timeline';
 
 export interface OperationResult {
@@ -308,7 +308,6 @@ export function changeClipSpeed(
   if (clip.type !== 'video' && clip.type !== 'audio') return clips;
 
   const mediaClip = clip as VideoClip | AudioClip;
-  const currentSpeed = mediaClip.speed || 1.0;
   if (newSpeed <= 0) throw new Error('Speed must be positive');
 
   // Timeline duration changes inversely with speed

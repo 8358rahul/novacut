@@ -15,11 +15,10 @@ import {
   CapCutTrack,
   CapCutSegment,
   CapCutVideoMaterial,
-  CapCutCanvasConfig,
 } from './capcutDraftModel';
 import { Project, AspectRatio, DEFAULT_PROJECT_SETTINGS } from '../models/project';
 import { TimelineTrack, TrackType } from '../models/timeline';
-import { VideoClip, DEFAULT_TRANSFORM, DEFAULT_COLOR_ADJUSTMENTS, Clip } from '../models/clip';
+import { VideoClip, DEFAULT_COLOR_ADJUSTMENTS, Clip } from '../models/clip';
 import { MediaAsset } from '../models/asset';
 import { DEFAULT_EXPORT_SETTINGS } from '../models/export';
 

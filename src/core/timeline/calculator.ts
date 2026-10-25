@@ -1,5 +1,5 @@
 import { Clip } from '../models/clip';
-import { TimelineTrack, MICROS_PER_SECOND } from '../models/timeline';
+import { MICROS_PER_SECOND } from '../models/timeline';
 
 export interface TimelineBounds {
   startUs: number;

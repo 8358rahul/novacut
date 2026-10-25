@@ -2,7 +2,7 @@ import React from 'react';
 import { View, Text, StyleSheet, Modal, TouchableOpacity, ScrollView } from 'react-native';
 import { colors, spacing, borderRadius } from '../../theme';
 import { SpeedCurve, SpeedCurvePreset } from '../../core/models/clip';
-import { SPEED_CURVE_PRESETS, createSpeedCurveFromPreset } from '../../core/timeline/speedCurves';
+import { createSpeedCurveFromPreset } from '../../core/timeline/speedCurves';
 
 export interface SpeedCurveModalProps {
   visible: boolean;

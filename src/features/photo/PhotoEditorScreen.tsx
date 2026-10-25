@@ -19,12 +19,9 @@ import {
   PhotoEditorEngine,
   PhotoProjectState,
   createInitialPhotoState,
-  PhotoAspectRatio,
   PHOTO_ASPECT_RATIOS,
   PHOTO_FILTERS,
-  PhotoFilterPresetId,
   calculateCanvasDimensions,
-  DEFAULT_PHOTO_ADJUSTMENTS,
   DEFAULT_PHOTO_RETOUCH,
   DEFAULT_PHOTO_CUTOUT,
 } from '../../core/photo/photoEngine';
@@ -70,7 +67,6 @@ export const PhotoEditorScreen: React.FC<PhotoEditorScreenProps> = ({
 }) => {
   const insets = useGuaranteedInsets();
   const windowWidth = Dimensions.get('window').width;
-  const canvasAreaHeight = 350;
 
   const [engine] = useState<PhotoEditorEngine>(() => {
     const uri = initialImageUri || DEMO_PHOTO_ASSET;
@@ -240,16 +236,12 @@ export const PhotoEditorScreen: React.FC<PhotoEditorScreenProps> = ({
   const handleAddText = () => {
     if (newTextContent.trim()) {
       let color = '#FFFFFF';
-      let bgColor = 'rgba(0,0,0,0.6)';
       if (selectedTextStyle === 'neon') {
         color = '#00E5FF';
-        bgColor = 'rgba(0, 229, 255, 0.2)';
       } else if (selectedTextStyle === 'bubble') {
         color = '#FF007A';
-        bgColor = '#FFFFFF';
       } else if (selectedTextStyle === 'cine') {
         color = '#FFD700';
-        bgColor = '#121216';
       }
 
       engine.addTextOverlay(newTextContent.trim(), color, 50, 50);
