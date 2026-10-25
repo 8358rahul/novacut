@@ -216,8 +216,8 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
   };
 
   return (
-    <View className="flex-1 bg-background w-full items-center">
-      <View className="w-full max-w-4xl flex-1">
+    <View style={styles.container}>
+      <View style={styles.contentWrapper}>
         {/* Top Brand & Search Bar Header */}
         <View style={[styles.topBar, { paddingTop: insets.top + spacing.xs }]}>
         <View style={styles.brandRow}>
@@ -367,17 +367,16 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
 
       {/* CapCut-Style Bottom Navigation Bar (rendered when standalone) */}
       {!hideBottomBar && (
-        <View className="w-full items-center bg-zinc-900 border-t border-zinc-800">
-          <View
-            style={[
-              styles.bottomTabBar,
-              {
-                paddingBottom: insets.bottom,
-                height: 58 + insets.bottom,
-              },
-            ]}
-            className="w-full max-w-4xl"
-          >
+        <View
+          style={[
+            styles.bottomTabBar,
+            {
+              paddingBottom: insets.bottom,
+              height: 58 + insets.bottom,
+            },
+          ]}
+        >
+          <View style={styles.bottomTabBarInner}>
             <TouchableOpacity style={styles.bottomTabActive}>
               <Text style={styles.bottomTabIcon}>✂️</Text>
               <Text style={styles.bottomTabLabelActive}>Edit</Text>
@@ -558,6 +557,12 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: colors.background,
+  },
+  contentWrapper: {
+    flex: 1,
+    width: '100%',
+    maxWidth: 960,
+    alignSelf: 'center',
   },
   topBar: {
     flexDirection: 'row',
@@ -914,13 +919,20 @@ const styles = StyleSheet.create({
     bottom: 0,
     left: 0,
     right: 0,
-    height: 64,
     backgroundColor: colors.surface,
+    borderTopWidth: 1,
+    borderTopColor: colors.border,
+    zIndex: 100,
+    elevation: 8,
+    justifyContent: 'center',
+  },
+  bottomTabBarInner: {
     flexDirection: 'row',
     justifyContent: 'space-around',
     alignItems: 'center',
-    borderTopWidth: 1,
-    borderTopColor: colors.border,
+    width: '100%',
+    maxWidth: 960,
+    alignSelf: 'center',
   },
   bottomTab: {
     alignItems: 'center',

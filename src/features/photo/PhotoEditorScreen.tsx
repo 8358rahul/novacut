@@ -300,8 +300,8 @@ export const PhotoEditorScreen: React.FC<PhotoEditorScreenProps> = ({
   const currentRetouch = state.retouch || DEFAULT_PHOTO_RETOUCH;
 
   return (
-    <View className="flex-1 bg-background w-full items-center">
-      <View className="w-full max-w-4xl flex-1">
+    <View style={styles.container}>
+      <View style={styles.contentWrapper}>
         {/* Top Header */}
       <Header
         title="Photo Studio"
@@ -1217,6 +1217,12 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: colors.background,
+  },
+  contentWrapper: {
+    flex: 1,
+    width: '100%',
+    maxWidth: 960,
+    alignSelf: 'center',
   },
   aiActionBanner: {
     flexDirection: 'row',

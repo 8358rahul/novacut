@@ -5,11 +5,10 @@ import { colors, borderRadius, spacing } from '../theme';
 export interface CardProps {
   children: React.ReactNode;
   style?: ViewStyle;
-  className?: string;
 }
 
-export const Card: React.FC<CardProps> = ({ children, style, className }) => {
-  return <View className={className} style={[styles.card, style]}>{children}</View>;
+export const Card: React.FC<CardProps> = ({ children, style }) => {
+  return <View style={[styles.card, style]}>{children}</View>;
 };
 
 const styles = StyleSheet.create({

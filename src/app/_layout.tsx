@@ -1,4 +1,3 @@
-import '../global.css';
 import React from 'react';
 import { Stack } from 'expo-router';
 import { SafeAreaProvider, initialWindowMetrics } from 'react-native-safe-area-context';

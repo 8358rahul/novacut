@@ -5,11 +5,10 @@ import { colors, borderRadius, spacing } from '../theme';
 export interface BadgeProps {
   label: string;
   variant?: 'primary' | 'accent' | 'muted';
-  className?: string;
   style?: any;
 }
 
-export const Badge: React.FC<BadgeProps> = ({ label, variant = 'muted', className, style }) => {
+export const Badge: React.FC<BadgeProps> = ({ label, variant = 'muted', style }) => {
   const getColors = () => {
     switch (variant) {
       case 'primary':
@@ -24,7 +23,7 @@ export const Badge: React.FC<BadgeProps> = ({ label, variant = 'muted', classNam
   const c = getColors();
 
   return (
-    <View className={className} style={[styles.badge, { backgroundColor: c.bg }, style]}>
+    <View style={[styles.badge, { backgroundColor: c.bg }, style]}>
       <Text style={[styles.text, { color: c.text }]}>{label}</Text>
     </View>
   );

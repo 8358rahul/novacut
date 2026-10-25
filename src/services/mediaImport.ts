@@ -95,7 +95,10 @@ export async function pickVideoFromStorage(
 ): Promise<PickMediaResult | null> {
   try {
     try {
-      await ImagePicker.requestMediaLibraryPermissionsAsync();
+      const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      if (!perm.granted) {
+        console.warn('Media library permission not granted:', perm.status);
+      }
     } catch (e) {
       console.warn('Media library permission check:', e);
     }
@@ -105,12 +108,14 @@ export async function pickVideoFromStorage(
         ? ['images']
         : preferredType === 'video'
         ? ['videos']
-        : ['videos', 'images'];
+        : ['images', 'videos'];
 
     const result = await ImagePicker.launchImageLibraryAsync({
       mediaTypes,
       allowsEditing: false,
       quality: 1,
+      videoExportPreset: ImagePicker.VideoExportPreset.Passthrough,
+      shouldDownloadFromNetwork: true,
     });
 
     if (result.canceled || !result.assets || result.assets.length === 0) {
@@ -122,11 +127,11 @@ export async function pickVideoFromStorage(
     const assetId = `asset_${Date.now()}`;
     const clipId = `clip_${isImage ? 'img' : 'vid'}_${Date.now()}`;
 
-    // Compute duration: picked.duration is in ms on iOS/Android if available
+    // Compute duration: expo-image-picker returns duration in ms for videos
     let durationUs = secondsToMicros(isImage ? 4 : 5);
     if (picked.duration && picked.duration > 0) {
-      const durationMs = picked.duration > 1000 ? picked.duration : picked.duration * 1000;
-      durationUs = Math.round(durationMs * 1000);
+      const durationMs = picked.duration > 100_000 ? picked.duration / 1000 : picked.duration;
+      durationUs = Math.max(1_000_000, Math.round(durationMs * 1000));
     }
 
     const asset: MediaAsset = {

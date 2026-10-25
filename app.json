@@ -9,7 +9,12 @@
     "scheme": "novacut",
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.novacut.app"
+      "bundleIdentifier": "com.novacut.app",
+      "infoPlist": {
+        "NSPhotoLibraryUsageDescription": "NovaCut needs access to your photos and videos to import clips into the editor.",
+        "NSCameraUsageDescription": "NovaCut needs access to your camera to record videos and photos.",
+        "NSMicrophoneUsageDescription": "NovaCut needs access to your microphone to record audio with video."
+      }
     },
     "android": {
       "package": "com.novacut.app",
@@ -28,7 +33,14 @@
       "expo-video",
       "expo-status-bar",
       "expo-sharing",
-      "expo-router"
+      "expo-router",
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "NovaCut needs access to your photos and videos to import clips into the editor.",
+          "cameraPermission": "NovaCut needs access to your camera to record videos and photos."
+        }
+      ]
     ]
   }
 }

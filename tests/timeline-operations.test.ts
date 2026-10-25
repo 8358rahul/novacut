@@ -165,4 +165,40 @@ describe('Non-Destructive Timeline Operations', () => {
     const resClampLow = changeClipVolume(clips, 'c1', -0.5);
     assert.strictEqual((resClampLow['c1'] as VideoClip).volume, 0);
   });
+
+  it('interactively trims clip start (dragging left/right) and adjusts duration', () => {
+    const clip = createMockVideoClip('c1', 1_000_000, 3_000_000); // 1s to 4s (3s duration)
+    const track: TimelineTrack = { id: 't1', type: 'video', clips: ['c1'] };
+    const clips = { c1: clip };
+
+    // Drag right by 1s (newStart = 2s) -> duration shrinks to 2s
+    const resRight = trimClipStart(track, clips, 'c1', 2_000_000);
+    const trimmedRight = resRight.updatedClips['c1'];
+    assert.strictEqual(trimmedRight.timelineRange.startUs, 2_000_000);
+    assert.strictEqual(trimmedRight.timelineRange.durationUs, 2_000_000);
+
+    // Drag left by 1s (newStart = 0s) -> duration expands to 4s
+    const resLeft = trimClipStart(track, clips, 'c1', 0);
+    const trimmedLeft = resLeft.updatedClips['c1'];
+    assert.strictEqual(trimmedLeft.timelineRange.startUs, 0);
+    assert.strictEqual(trimmedLeft.timelineRange.durationUs, 4_000_000);
+  });
+
+  it('interactively trims clip end (dragging left/right) and adjusts duration', () => {
+    const clip = createMockVideoClip('c1', 1_000_000, 3_000_000); // 1s to 4s
+    const track: TimelineTrack = { id: 't1', type: 'video', clips: ['c1'] };
+    const clips = { c1: clip };
+
+    // Drag right to 6s -> duration expands to 5s
+    const resRight = trimClipEnd(track, clips, 'c1', 6_000_000);
+    const trimmedRight = resRight.updatedClips['c1'];
+    assert.strictEqual(trimmedRight.timelineRange.startUs, 1_000_000);
+    assert.strictEqual(trimmedRight.timelineRange.durationUs, 5_000_000);
+
+    // Drag left to 2s -> duration shrinks to 1s
+    const resLeft = trimClipEnd(track, clips, 'c1', 2_000_000);
+    const trimmedLeft = resLeft.updatedClips['c1'];
+    assert.strictEqual(trimmedLeft.timelineRange.startUs, 1_000_000);
+    assert.strictEqual(trimmedLeft.timelineRange.durationUs, 1_000_000);
+  });
 });

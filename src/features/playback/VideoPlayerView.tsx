@@ -15,6 +15,7 @@ export interface VideoPlayerViewProps {
   activeSubtitle?: string;
   onPlaybackTimeUpdate?: (currentMs: number) => void;
   onImportPress?: () => void;
+  onAddSamplePress?: () => void;
 }
 
 export const isImageUri = (uri?: string): boolean => {
@@ -42,6 +43,7 @@ export const VideoPlayerView: React.FC<VideoPlayerViewProps> = ({
   activeSubtitle,
   onPlaybackTimeUpdate,
   onImportPress,
+  onAddSamplePress,
 }) => {
   const player = useVideoPlayer(videoUri || null, (p) => {
     p.loop = false;
@@ -127,17 +129,28 @@ export const VideoPlayerView: React.FC<VideoPlayerViewProps> = ({
         <Text style={styles.placeholderIcon}>🎬</Text>
         <Text style={styles.placeholderTitle}>No Media Loaded</Text>
         <Text style={styles.placeholderSubtitle}>
-          Import a video or photo from your phone's gallery to begin editing.
+          Import videos from your iPhone gallery or load a sample scene to explore editing tools.
         </Text>
-        {onImportPress && (
-          <TouchableOpacity
-            style={styles.importBtn}
-            onPress={onImportPress}
-            activeOpacity={0.8}
-          >
-            <Text style={styles.importBtnText}>🖼️ Choose from Gallery</Text>
-          </TouchableOpacity>
-        )}
+        <View style={styles.placeholderBtnRow}>
+          {onImportPress && (
+            <TouchableOpacity
+              style={styles.importBtn}
+              onPress={onImportPress}
+              activeOpacity={0.8}
+            >
+              <Text style={styles.importBtnText}>🖼️ Choose Video</Text>
+            </TouchableOpacity>
+          )}
+          {onAddSamplePress && (
+            <TouchableOpacity
+              style={styles.sampleBtn}
+              onPress={onAddSamplePress}
+              activeOpacity={0.8}
+            >
+              <Text style={styles.sampleBtnText}>✨ Sample Scene</Text>
+            </TouchableOpacity>
+          )}
+        </View>
       </View>
     );
   }
@@ -542,18 +555,37 @@ const styles = StyleSheet.create({
     color: colors.textMuted,
     textAlign: 'center',
     marginTop: 2,
-    marginBottom: spacing.md,
-    maxWidth: 220,
+    marginBottom: spacing.sm,
+    maxWidth: 240,
+  },
+  placeholderBtnRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs,
+    marginTop: spacing.xs,
   },
   importBtn: {
     backgroundColor: colors.primary,
     paddingVertical: spacing.xs + 2,
-    paddingHorizontal: spacing.md,
+    paddingHorizontal: spacing.sm + 2,
     borderRadius: borderRadius.sm,
   },
   importBtnText: {
+    color: '#000000',
+    fontSize: 11,
+    fontWeight: '700',
+  },
+  sampleBtn: {
+    backgroundColor: colors.surfaceLight,
+    borderWidth: 1,
+    borderColor: colors.border,
+    paddingVertical: spacing.xs + 2,
+    paddingHorizontal: spacing.sm + 2,
+    borderRadius: borderRadius.sm,
+  },
+  sampleBtnText: {
     color: colors.textPrimary,
-    fontSize: 12,
+    fontSize: 11,
     fontWeight: '600',
   },
 });

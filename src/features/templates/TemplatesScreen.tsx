@@ -160,8 +160,8 @@ export const TemplatesScreen: React.FC<TemplatesScreenProps> = ({
   };
 
   return (
-    <View className="flex-1 bg-background w-full items-center">
-      <View className="w-full max-w-4xl flex-1">
+    <View style={styles.container}>
+      <View style={styles.contentWrapper}>
         <Header
         title="Viral Templates"
         onBack={onBack}
@@ -319,6 +319,12 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: colors.background,
+  },
+  contentWrapper: {
+    flex: 1,
+    width: '100%',
+    maxWidth: 960,
+    alignSelf: 'center',
   },
   headerSearchBtn: {
     padding: spacing.xs,

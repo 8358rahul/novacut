@@ -10,6 +10,7 @@ import {
   Alert,
   ActivityIndicator,
   Platform,
+  PanResponder,
 } from 'react-native';
 import { colors, spacing, borderRadius } from '../../theme';
 import { Header } from '../../components/Header';
@@ -43,6 +44,7 @@ import { AudioModal } from '../audio/AudioModal';
 import { SubtitleModal } from './SubtitleModal';
 import { SpeedCurveModal } from './SpeedCurveModal';
 import { BlendModeModal } from './BlendModeModal';
+import { TimelineClip } from './TimelineClip';
 import { SplitScreenModal } from './SplitScreenModal';
 import { LUT_FILTERS_CATALOG } from '../../core/effects/effectRegistry';
 import { VIRAL_TEMPLATES, compileProjectFromTemplate } from '../../core/templates/templateEngine';
@@ -88,6 +90,7 @@ export const EditorScreen: React.FC<EditorScreenProps> = ({
   const [splitScreenModalVisible, setSplitScreenModalVisible] = useState(false);
   const [ratioModalVisible, setRatioModalVisible] = useState(false);
   const [assetUriMap, setAssetUriMap] = useState<Record<string, string>>({});
+  const [isDraggingTimeline, setIsDraggingTimeline] = useState(false);
 
   const timelineScrollRef = useRef<any>(null);
   const playTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -310,6 +313,71 @@ export const EditorScreen: React.FC<EditorScreenProps> = ({
     [engine, durationUs]
   );
 
+  const rulerPanResponder = useMemo(
+    () =>
+      PanResponder.create({
+        onStartShouldSetPanResponder: () => true,
+        onMoveShouldSetPanResponder: () => true,
+        onPanResponderGrant: (evt) => {
+          setIsDraggingTimeline(true);
+          const touchX = evt.nativeEvent.locationX;
+          const targetUs = pixelsToTimeUs(Math.max(0, touchX - TRACK_HEADER_WIDTH), pixelsPerSec);
+          handleSeek(targetUs);
+        },
+        onPanResponderMove: (evt) => {
+          const touchX = evt.nativeEvent.locationX;
+          const targetUs = pixelsToTimeUs(Math.max(0, touchX - TRACK_HEADER_WIDTH), pixelsPerSec);
+          handleSeek(targetUs);
+        },
+        onPanResponderRelease: () => {
+          setIsDraggingTimeline(false);
+        },
+        onPanResponderTerminate: () => {
+          setIsDraggingTimeline(false);
+        },
+      }),
+    [pixelsPerSec, handleSeek]
+  );
+
+  const handleTrimStartExplicit = useCallback(
+    (clipId: string, newStartUs: number) => {
+      if (!engine) return;
+      try {
+        engine.trimStart(clipId, newStartUs);
+        setState({ ...engine.getState() });
+      } catch (e: any) {
+        console.warn('Trim start error:', e.message);
+      }
+    },
+    [engine]
+  );
+
+  const handleTrimEndExplicit = useCallback(
+    (clipId: string, newEndUs: number) => {
+      if (!engine) return;
+      try {
+        engine.trimEnd(clipId, newEndUs);
+        setState({ ...engine.getState() });
+      } catch (e: any) {
+        console.warn('Trim end error:', e.message);
+      }
+    },
+    [engine]
+  );
+
+  const handleMoveClipExplicit = useCallback(
+    (clipId: string, newStartUs: number) => {
+      if (!engine) return;
+      try {
+        engine.moveClip(clipId, newStartUs);
+        setState({ ...engine.getState() });
+      } catch (e: any) {
+        console.warn('Move clip error:', e.message);
+      }
+    },
+    [engine]
+  );
+
   const handleStepFrame = useCallback(
     (direction: -1 | 1) => {
       if (!engine || !state) return;
@@ -512,12 +580,34 @@ export const EditorScreen: React.FC<EditorScreenProps> = ({
       let newClip: Clip;
       if (type === 'video') {
         const videoTrack = state.project.tracks.find((t) => t.type === 'video')!;
+        const sampleVideoUri = 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4';
+        const assetId = `asset_sample_${clipIndex}_${Date.now()}`;
+        setAssetUriMap((prev) => ({ ...prev, [assetId]: sampleVideoUri }));
+
+        const sampleAsset = {
+          id: assetId,
+          uri: sampleVideoUri,
+          name: `Scene ${clipIndex}.mp4`,
+          type: 'video' as const,
+          metadata: {
+            width: 1920,
+            height: 1080,
+            durationUs: clipDurationUs,
+            fps: 30,
+            mimeType: 'video/mp4',
+            fileSize: 0,
+            hasAudio: true,
+          },
+          createdAt: Date.now(),
+        };
+        state.project.assets = { ...(state.project.assets || {}), [assetId]: sampleAsset };
+
         newClip = {
           id: `clip_vid_${Date.now()}`,
           trackId: videoTrack.id,
           type: 'video',
           name: `Scene ${clipIndex}.mp4`,
-          assetId: `asset_demo_${clipIndex}`,
+          assetId,
           timelineRange: { startUs, durationUs: clipDurationUs },
           sourceRange: { startUs: 0, durationUs: clipDurationUs },
           speed: 1.0,
@@ -835,14 +925,17 @@ export const EditorScreen: React.FC<EditorScreenProps> = ({
             activeSubtitle={activeSubtitleText}
             onPlaybackTimeUpdate={handlePlaybackTimeUpdate}
             onImportPress={handleImportVideo}
+            onAddSamplePress={() => handleAddDemoClip('video')}
           />
 
-          {/* Floating Canvas Timecode HUD */}
-          <View style={styles.canvasTimecodePill}>
-            <Text style={styles.canvasTimecodeText}>
-              {formatTimecode(state.playheadUs)} / {formatTimecode(durationUs)}
-            </Text>
-          </View>
+          {/* Floating Canvas Timecode HUD (Shown when media is active, avoiding overlap on empty canvas) */}
+          {durationUs > 0 && (
+            <View style={styles.canvasTimecodePill}>
+              <Text style={styles.canvasTimecodeText}>
+                {formatTimecode(state.playheadUs)} / {formatTimecode(durationUs)}
+              </Text>
+            </View>
+          )}
         </View>
       </View>
 
@@ -885,9 +978,9 @@ export const EditorScreen: React.FC<EditorScreenProps> = ({
 
         {/* Desktop Web Keyboard Shortcuts Pill */}
         {isDesktop && (
-          <View className="flex-row items-center gap-2 bg-zinc-900 px-3 py-1 rounded-full border border-zinc-800">
-            <Text className="text-xs text-zinc-400 font-medium">
-              ⌨️ <Text className="text-white font-bold">Space</Text> Play · <Text className="text-white font-bold">S</Text> Split · <Text className="text-white font-bold">Del</Text> Delete · <Text className="text-white font-bold">◀/▶</Text> Frame
+          <View style={styles.desktopKeyboardPill}>
+            <Text style={styles.desktopKeyboardText}>
+              ⌨️ <Text style={styles.desktopKeyboardKey}>Space</Text> Play · <Text style={styles.desktopKeyboardKey}>S</Text> Split · <Text style={styles.desktopKeyboardKey}>Del</Text> Delete · <Text style={styles.desktopKeyboardKey}>◀/▶</Text> Frame
             </Text>
           </View>
         )}
@@ -945,6 +1038,7 @@ export const EditorScreen: React.FC<EditorScreenProps> = ({
         <ScrollView
           ref={timelineScrollRef}
           horizontal
+          scrollEnabled={!isDraggingTimeline}
           showsHorizontalScrollIndicator
           style={styles.timelineScrollView}
           contentContainerStyle={[
@@ -952,17 +1046,10 @@ export const EditorScreen: React.FC<EditorScreenProps> = ({
             { width: timelineWidth },
           ]}
         >
-          {/* Timeline Ruler */}
-          <TouchableOpacity
-            activeOpacity={1}
+          {/* Timeline Ruler with Drag Scrubbing */}
+          <View
             style={styles.ruler}
-            onPress={(e) => {
-              const x = e.nativeEvent.locationX - TRACK_HEADER_WIDTH;
-              if (x >= 0) {
-                const targetUs = pixelsToTimeUs(x, pixelsPerSec);
-                handleSeek(targetUs);
-              }
-            }}
+            {...rulerPanResponder.panHandlers}
           >
             <View style={styles.rulerHeader}>
               <Text style={styles.rulerHeaderText}>⏱️ TIME</Text>
@@ -982,7 +1069,7 @@ export const EditorScreen: React.FC<EditorScreenProps> = ({
                 <View style={[styles.rulerSubTick, { left: 45 }]} />
               </View>
             ))}
-          </TouchableOpacity>
+          </View>
 
           {/* Tracks Area */}
           <View style={styles.tracksArea}>
@@ -1016,87 +1103,40 @@ export const EditorScreen: React.FC<EditorScreenProps> = ({
                       {trackLabel}
                     </Text>
                   </View>
-                  <TouchableOpacity
-                    activeOpacity={1}
-                    style={styles.trackContent}
-                    onPress={(e) => {
-                      const x = e.nativeEvent.locationX;
-                      const targetUs = pixelsToTimeUs(x, pixelsPerSec);
-                      handleSeek(targetUs);
-                    }}
-                  >
+                  <View style={styles.trackContent}>
                     {trackClips.map((clip, clipIndex) => {
-                      const left = timeUsToPixels(
-                        clip.timelineRange.startUs,
-                        pixelsPerSec
-                      );
-                      const width = Math.max(
-                        34,
-                        timeUsToPixels(clip.timelineRange.durationUs, pixelsPerSec)
-                      );
                       const isSelected = state.selectedClipId === clip.id;
 
                       return (
-                        <React.Fragment key={clip.id}>
-                          <TouchableOpacity
-                            activeOpacity={0.8}
-                            onPress={() => handleSelectClip(clip.id)}
-                            style={[
-                              styles.clipBlock,
-                              clip.type === 'video' && styles.videoClip,
-                              clip.type === 'audio' && styles.audioClip,
-                              clip.type === 'text' && styles.textClip,
-                              isSelected && styles.clipSelected,
-                              { left, width },
-                            ]}
-                          >
-                            <Text style={styles.clipText} numberOfLines={1}>
-                              {clip.name}
-                            </Text>
-                            {clip.type === 'audio' && (
-                              <View style={styles.waveformContainer}>
-                                {WAVEFORM_PREVIEW_HEIGHTS.map((barHeight, barIdx) => (
-                                  <View
-                                    key={barIdx}
-                                    style={[styles.waveformBar, { height: barHeight }]}
-                                  />
-                                ))}
-                              </View>
-                            )}
-                            {isSelected && (
-                              <>
-                                <View style={[styles.trimHandle, styles.trimLeft]}>
-                                  <Text style={styles.trimGripText}>||</Text>
-                                </View>
-                                <View style={[styles.trimHandle, styles.trimRight]}>
-                                  <Text style={styles.trimGripText}>||</Text>
-                                </View>
-                              </>
-                            )}
-                          </TouchableOpacity>
-
-                          {/* CapCut Transition Square between Video Clips */}
-                          {clip.type === 'video' && clipIndex < trackClips.length - 1 && (
-                            <TouchableOpacity
-                              style={[
-                                styles.transitionSquareBtn,
-                                {
-                                  left: left + width - 11,
-                                },
-                              ]}
-                              onPress={() => {
-                                handleSelectClip(clip.id);
-                                setTransitionModalVisible(true);
-                              }}
-                              activeOpacity={0.8}
-                            >
-                              <Text style={styles.transitionSquareIcon}>|</Text>
-                            </TouchableOpacity>
-                          )}
-                        </React.Fragment>
+                        <TimelineClip
+                          key={clip.id}
+                          clip={clip}
+                          isSelected={isSelected}
+                          pixelsPerSec={pixelsPerSec}
+                          onSelect={handleSelectClip}
+                          onTrimStart={handleTrimStartExplicit}
+                          onTrimEnd={handleTrimEndExplicit}
+                          onMove={handleMoveClipExplicit}
+                          onDragStateChange={setIsDraggingTimeline}
+                          onSeek={handleSeek}
+                          renderTransitionButton={
+                            clip.type === 'video' && clipIndex < trackClips.length - 1 ? (
+                              <TouchableOpacity
+                                style={[styles.transitionSquareBtn, { right: -11 }]}
+                                onPress={() => {
+                                  handleSelectClip(clip.id);
+                                  setTransitionModalVisible(true);
+                                }}
+                                activeOpacity={0.8}
+                              >
+                                <Text style={styles.transitionSquareIcon}>|</Text>
+                              </TouchableOpacity>
+                            ) : undefined
+                          }
+                        />
                       );
                     })}
-                  </TouchableOpacity>
+                  </View>
                 </View>
               );
             })}
@@ -1625,6 +1665,26 @@ const styles = StyleSheet.create({
     backgroundColor: colors.surface,
     borderBottomWidth: 1,
     borderBottomColor: colors.border,
+  },
+  desktopKeyboardPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    backgroundColor: '#18181B',
+    paddingHorizontal: 12,
+    paddingVertical: 4,
+    borderRadius: 999,
+    borderWidth: 1,
+    borderColor: '#27272A',
+  },
+  desktopKeyboardText: {
+    fontSize: 11,
+    color: '#A1A1AA',
+    fontWeight: '500',
+  },
+  desktopKeyboardKey: {
+    color: '#FFFFFF',
+    fontWeight: '700',
   },
   undoRedoGroup: {
     flexDirection: 'row',
