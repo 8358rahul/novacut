@@ -50,6 +50,8 @@ import { LUT_FILTERS_CATALOG } from '../../core/effects/effectRegistry';
 import { VIRAL_TEMPLATES, compileProjectFromTemplate } from '../../core/templates/templateEngine';
 import { useGuaranteedInsets } from '../../navigation/safeArea';
 import { AnimatedPlayhead, LottieAudioVisualizer } from '../../components/animations';
+import { FilmoraStudioModal } from '../filmora/FilmoraStudioModal';
+import { AudioDuckingEngine } from '../../core/filmora/audioDuckingEngine';
 
 export interface EditorScreenProps {
   projectId: string;
@@ -89,6 +91,7 @@ export const EditorScreen: React.FC<EditorScreenProps> = ({
   const [blendModeModalVisible, setBlendModeModalVisible] = useState(false);
   const [splitScreenModalVisible, setSplitScreenModalVisible] = useState(false);
   const [ratioModalVisible, setRatioModalVisible] = useState(false);
+  const [filmoraModalVisible, setFilmoraModalVisible] = useState(false);
   const [assetUriMap, setAssetUriMap] = useState<Record<string, string>>({});
   const [isDraggingTimeline, setIsDraggingTimeline] = useState(false);
 
@@ -1371,6 +1374,14 @@ export const EditorScreen: React.FC<EditorScreenProps> = ({
               <Text style={styles.dockActionLabel}>Ratio</Text>
             </TouchableOpacity>
 
+            <TouchableOpacity
+              style={styles.dockActionBtn}
+              onPress={() => setFilmoraModalVisible(true)}
+            >
+              <Text style={styles.dockActionIcon}>🎬✨</Text>
+              <Text style={styles.dockActionLabel}>Filmora</Text>
+            </TouchableOpacity>
+
             <TouchableOpacity style={styles.dockActionBtn} onPress={handleImportVideo}>
               <Text style={[styles.dockActionIcon, { color: colors.primary }]}>🖼️</Text>
               <Text style={[styles.dockActionLabel, { color: colors.primary }]}>Gallery</Text>
@@ -1511,6 +1522,27 @@ export const EditorScreen: React.FC<EditorScreenProps> = ({
           onClose={() => setAudioModalVisible(false)}
         />
       )}
+
+      {/* Filmora Studio Modal */}
+      <FilmoraStudioModal
+        visible={filmoraModalVisible}
+        project={state.project}
+        onApplyDucking={(duckingOpts) => {
+          if (!engine) return;
+          const clipList = Object.values(state.project.clips || {});
+          for (const clip of clipList) {
+            if (clip.type === 'audio') {
+              const aClip = clip as AudioClip;
+              if (aClip.name.toLowerCase().includes('bgm') || aClip.name.toLowerCase().includes('music')) {
+                const duckRatio = duckingOpts.duckingRatio ?? Math.pow(10, (duckingOpts.duckingLevelDb ?? -12) / 20);
+                engine.updateAudioProperties(aClip.id, { volume: Math.round(duckRatio * 100) / 100 });
+              }
+            }
+          }
+          setState({ ...engine.getState() });
+        }}
+        onClose={() => setFilmoraModalVisible(false)}
+      />
 
       {/* Subtitles Modal */}
       <SubtitleModal
