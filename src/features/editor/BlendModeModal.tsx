@@ -1,5 +1,6 @@
+import { AppModal as Modal } from '../../components/AppModal';
 import React from 'react';
-import { View, Text, StyleSheet, Modal, TouchableOpacity, ScrollView } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView } from 'react-native';
 import { colors, spacing, borderRadius } from '../../theme';
 import { BlendMode } from '../../core/models/clip';
 
@@ -38,7 +39,7 @@ export const BlendModeModal: React.FC<BlendModeModalProps> = ({
             </TouchableOpacity>
           </View>
 
-          <ScrollView style={styles.list} showsVerticalScrollIndicator={false}>
+          <ScrollView keyboardShouldPersistTaps="handled" style={styles.list} showsVerticalScrollIndicator={false}>
             {BLEND_MODES.map((item) => {
               const isSelected = currentMode === item.id;
               return (

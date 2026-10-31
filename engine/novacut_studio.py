@@ -13,10 +13,12 @@ import time
 import shutil
 import hashlib
 import base64
+import uuid
+import mimetypes
 import urllib.request
 import subprocess
 from pathlib import Path
-from typing import List, Dict, Any, Optional
+from typing import List, Dict, Any, Optional, Literal
 
 import imageio_ffmpeg
 from fastapi import FastAPI, HTTPException, BackgroundTasks, Query, UploadFile, File
@@ -33,10 +35,20 @@ from ai_audio import detect_audio_beats_and_waveforms
 
 # Get static FFmpeg executable path
 FFMPEG_EXE = imageio_ffmpeg.get_ffmpeg_exe()
-OUTPUT_DIR = Path("D:/work/capcut/novacut/exports")
+DATA_DIR = Path(os.environ.get("NOVACUT_DATA_DIR", str(Path(__file__).resolve().parent / "data")))
+OUTPUT_DIR = DATA_DIR / "exports"
 OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
-CACHE_DIR = Path("D:/work/capcut/novacut/engine/cache")
+CACHE_DIR = DATA_DIR / "cache"
 CACHE_DIR.mkdir(parents=True, exist_ok=True)
+
+
+def safe_child(directory: Path, filename: str) -> Path:
+    if not filename or Path(filename).name != filename or "\\" in filename:
+        raise HTTPException(status_code=400, detail="Invalid media filename")
+    path = (directory / filename).resolve()
+    if path.parent != directory.resolve():
+        raise HTTPException(status_code=400, detail="Invalid media filename")
+    return path
 
 
 def resolve_media_path(path_or_url: str) -> str:
@@ -50,7 +62,7 @@ def resolve_media_path(path_or_url: str) -> str:
     # 1. If it refers to an internal cached asset (e.g. /cache/cutout_123.png or http://...:8765/cache/cutout_123.png)
     if "/cache/" in path_or_url:
         filename = path_or_url.split("/cache/")[-1].split("?")[0]
-        cached_file = CACHE_DIR / filename
+        cached_file = safe_child(CACHE_DIR, filename)
         if cached_file.exists():
             return str(cached_file)
 
@@ -61,7 +73,7 @@ def resolve_media_path(path_or_url: str) -> str:
             img_bytes = base64.b64decode(raw_b64)
             ext = ".png" if "image/png" in path_or_url else ".jpg"
             filename = f"b64_{int(time.time() * 1000)}{ext}"
-            cached_file = CACHE_DIR / filename
+            cached_file = safe_child(CACHE_DIR, filename)
             with open(cached_file, "wb") as f:
                 f.write(img_bytes)
             return str(cached_file)
@@ -122,19 +134,30 @@ app.add_middleware(
 )
 
 
+class ColorModel(BaseModel):
+    brightness: float = Field(default=0, ge=-1, le=1)
+    contrast: float = Field(default=1, ge=0, le=4)
+    saturation: float = Field(default=1, ge=0, le=4)
+    temperature: float = Field(default=0, ge=-1, le=1)
+
+
 class ClipModel(BaseModel):
     id: str
     trackId: str
-    type: str  # 'video' | 'image' | 'audio' | 'text'
+    type: Literal['video', 'image', 'audio']
     uri: Optional[str] = None
     name: Optional[str] = None
-    startUs: int = 0
-    durationUs: int = 0
-    sourceStartUs: int = 0
+    startUs: int = Field(default=0, ge=0)
+    durationUs: int = Field(gt=0, le=3_600_000_000)
+    sourceStartUs: int = Field(default=0, ge=0)
     sourceDurationUs: int = 0
-    speed: float = 1.0
-    volume: float = 1.0
-    filterId: Optional[str] = None
+    speed: float = Field(default=1.0, ge=0.1, le=10)
+    volume: float = Field(default=1.0, ge=0, le=4)
+    zIndex: int = 0
+    visualEffect: str = "none"
+    visualEffectIntensity: float = Field(default=0.7, ge=0, le=1)
+    colorAdjustments: Optional[ColorModel] = None
+    filterId: Optional[Literal["normal", "teal_orange", "cyberpunk", "vintage_90s", "golden_hour", "bw_contrast", "vivid_warm", "moody_dark"]] = None
     transitionOut: Optional[str] = None
     text: Optional[str] = None
 
@@ -142,11 +165,11 @@ class ClipModel(BaseModel):
 class ExportRequest(BaseModel):
     projectId: str
     title: str = "NovaCut_Export"
-    aspectRatio: str = "9:16"  # '9:16', '16:9', '1:1', '4:5'
-    resolution: str = "1080p"  # '720p', '1080p', '4K'
-    fps: int = 30
-    quality: str = "high"  # 'standard', 'high', 'ultra'
-    clips: List[ClipModel] = []
+    aspectRatio: Literal["9:16", "16:9", "1:1", "4:5", "21:9"] = "9:16"  # '9:16', '16:9', '1:1', '4:5'
+    resolution: Literal["720p", "1080p", "4K"] = "1080p"  # '720p', '1080p', '4K'
+    fps: Literal[24, 30, 60] = 30
+    quality: Literal["standard", "high", "ultra"] = "high"  # 'standard', 'high', 'ultra'
+    clips: List[ClipModel] = Field(min_length=1, max_length=100)
 
 
 class CutoutRequest(BaseModel):
@@ -195,7 +218,10 @@ def get_resolution_dimensions(resolution: str, aspect_ratio: str) -> tuple[int, 
         ("4K", "1:1"): (2160, 2160),
         ("4K", "4:5"): (2160, 2700),
     }
-    return dim_map.get((resolution, aspect_ratio), (1080, 1920))
+    if aspect_ratio == "21:9":
+        height = {"720p": 720, "1080p": 1080, "4K": 2160}[resolution]
+        return (round(height * 21 / 9 / 2) * 2, height)
+    return dim_map[(resolution, aspect_ratio)]
 
 
 def build_filter_string(filter_id: Optional[str]) -> str:
@@ -227,90 +253,20 @@ def run_video_export(job_id: str, request: ExportRequest):
 
         out_width, out_height = get_resolution_dimensions(request.resolution, request.aspectRatio)
         clean_title = "".join(c for c in request.title if c.isalnum() or c in ("-", "_")).strip() or "Export"
-        output_filename = f"{clean_title}_{int(time.time())}.mp4"
+        output_filename = f"{clean_title}_{uuid.uuid4().hex}.mp4"
         output_file_path = OUTPUT_DIR / output_filename
 
-        # Filter media clips
-        video_clips = [c for c in request.clips if c.type in ("video", "image") and c.uri]
-
-        if not video_clips:
-            # Generate a solid aesthetic branded slate if no clips
-            cmd = [
-                FFMPEG_EXE,
-                "-y",
-                "-f", "lavfi",
-                "-i", f"color=c=black:s={out_width}x{out_height}:d=3:r={request.fps}",
-                "-f", "lavfi",
-                "-i", "anullsrc=r=44100:cl=stereo",
-                "-c:v", "libx264",
-                "-pix_fmt", "yuv420p",
-                "-c:a", "aac",
-                "-shortest",
-                "-movflags", "+faststart",
-                str(output_file_path),
-            ]
-            subprocess.run(cmd, check=True)
-            EXPORT_JOBS[job_id]["status"] = "completed"
-            EXPORT_JOBS[job_id]["progress"] = 1.0
-            EXPORT_JOBS[job_id]["outputPath"] = str(output_file_path)
-            return
-
-        # Prepare input arguments and complex filters
-        inputs = []
-        filter_parts = []
-        concat_v_inputs = []
-
-        for idx, clip in enumerate(video_clips):
-            local_uri = clip.uri.replace("file://", "") if clip.uri else ""
-            duration_sec = (clip.durationUs or 3_000_000) / 1_000_000
-            start_sec = (clip.sourceStartUs or 0) / 1_000_000
-
-            if clip.type == "image":
-                inputs.extend(["-loop", "1", "-t", str(duration_sec), "-i", local_uri])
-            else:
-                inputs.extend(["-ss", str(start_sec), "-t", str(duration_sec), "-i", local_uri])
-
-            # Video scaling & aspect padding
-            scale_filter = (
-                f"[{idx}:v]scale={out_width}:{out_height}:force_original_aspect_ratio=decrease,"
-                f"pad={out_width}:{out_height}:(ow-iw)/2:(oh-ih)/2:black,"
-                f"setsar=1,fps={request.fps}"
-            )
-            color_grade = build_filter_string(clip.filterId)
-            scale_filter += color_grade + f"[v{idx}]"
-            filter_parts.append(scale_filter)
-            concat_v_inputs.append(f"[v{idx}]")
-
-        # Concat video streams
-        concat_filter = f"{''.join(concat_v_inputs)}concat=n={len(video_clips)}:v=1:a=0[vout]"
-        filter_parts.append(concat_filter)
-
-        EXPORT_JOBS[job_id]["progress"] = 0.35
-
-        # Bitrate based on quality
-        bitrate_map = {"standard": "8M", "high": "16M", "ultra": "30M"}
-        video_bitrate = bitrate_map.get(request.quality, "16M")
-
-        cmd = [
-            FFMPEG_EXE,
-            "-y",
-            *inputs,
-            "-filter_complex", ";".join(filter_parts),
-            "-map", "[vout]",
-            "-c:v", "libx264",
-            "-preset", "fast",
-            "-b:v", video_bitrate,
-            "-pix_fmt", "yuv420p",
-            "-movflags", "+faststart",
-            str(output_file_path),
-        ]
-
-        EXPORT_JOBS[job_id]["progress"] = 0.65
-
-        # Run render
-        process = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+        from timeline_render import build_render_command
+        clips = [c.model_dump() for c in request.clips]
+        for clip in clips:
+            clip["uri"] = resolve_media_path(clip["uri"] or "")
+        cmd = build_render_command(FFMPEG_EXE, clips, str(output_file_path),
+                                   out_width, out_height, request.fps, request.quality,
+                                   build_filter_string)
+        EXPORT_JOBS[job_id]["progress"] = 0.2
+        process = subprocess.run(cmd, capture_output=True, text=True, timeout=1800)
         if process.returncode != 0:
-            raise RuntimeError(f"FFmpeg error: {process.stderr[-500:]}")
+            raise RuntimeError(f"FFmpeg error: {process.stderr[-1000:]}")
 
         EXPORT_JOBS[job_id]["status"] = "completed"
         EXPORT_JOBS[job_id]["progress"] = 1.0
@@ -341,7 +297,7 @@ def health():
 
 @app.post("/export")
 def start_export(request: ExportRequest, background_tasks: BackgroundTasks):
-    job_id = f"job_{int(time.time())}_{request.projectId}"
+    job_id = f"job_{uuid.uuid4().hex}"
     EXPORT_JOBS[job_id] = {
         "status": "queued",
         "progress": 0.0,
@@ -362,7 +318,7 @@ def get_export_status(job_id: str):
 
 @app.get("/download/{filename}")
 def download_export(filename: str):
-    file_path = OUTPUT_DIR / filename
+    file_path = safe_child(OUTPUT_DIR, filename)
     if not file_path.exists():
         raise HTTPException(status_code=404, detail="Exported file not found")
     return FileResponse(
@@ -383,7 +339,7 @@ async def api_upload_media(file: UploadFile = File(...)):
     """
     orig_name = file.filename or "upload.jpg"
     ext = Path(orig_name).suffix or ".jpg"
-    filename = f"upload_{int(time.time() * 1000)}{ext}"
+    filename = f"upload_{uuid.uuid4().hex}{ext}"
     dest = CACHE_DIR / filename
     with open(dest, "wb") as out:
         shutil.copyfileobj(file.file, out)
@@ -403,7 +359,7 @@ def api_remove_background(req: CutoutRequest):
     local_path = resolve_media_path(req.imagePath)
 
     filename = req.outputFilename or f"cutout_{int(time.time())}.png"
-    out_path = CACHE_DIR / filename
+    out_path = safe_child(CACHE_DIR, filename)
 
     try:
         res = remove_background(
@@ -446,7 +402,7 @@ def api_enhance_image(req: EnhanceRequest):
     local_path = resolve_media_path(req.imagePath)
 
     filename = req.outputFilename or f"enhance_{req.mode}_{int(time.time())}.jpg"
-    out_path = CACHE_DIR / filename
+    out_path = safe_child(CACHE_DIR, filename)
 
     try:
         res = enhance_image(
@@ -500,11 +456,38 @@ def api_detect_beats(req: AudioBeatRequest):
 
 @app.get("/cache/{filename}")
 def download_cached_media(filename: str):
-    file_path = CACHE_DIR / filename
+    file_path = safe_child(CACHE_DIR, filename)
     if not file_path.exists():
         raise HTTPException(status_code=404, detail="Cached asset not found")
-    media_type = "image/png" if filename.endswith(".png") else "image/jpeg"
+    media_type = mimetypes.guess_type(filename)[0] or "application/octet-stream"
     return FileResponse(path=str(file_path), filename=filename, media_type=media_type)
+
+
+@app.get("/api/effects")
+def get_effects_catalog(category: Optional[str] = None, q: Optional[str] = None):
+    """
+    Returns the CapCut-style video effects catalog with 60+ renderable FFmpeg shaders.
+    """
+    from video_effects import SUPPORTED_EFFECTS
+
+    effects = [
+        {
+            "id": eff,
+            "name": eff.replace("_", " ").title(),
+            "renderable": True,
+        }
+        for eff in SUPPORTED_EFFECTS
+        if eff != "none"
+    ]
+    if q:
+        query = q.lower().strip()
+        effects = [e for e in effects if query in e["name"].lower() or query in e["id"].lower()]
+
+    return {
+        "status": "success",
+        "total": len(effects),
+        "effects": effects,
+    }
 
 
 if __name__ == "__main__":

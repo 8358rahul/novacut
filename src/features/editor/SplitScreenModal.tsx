@@ -1,5 +1,6 @@
+import { AppModal as Modal } from '../../components/AppModal';
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, Modal, TouchableOpacity, ScrollView, Alert } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Alert } from 'react-native';
 import { colors, spacing, borderRadius } from '../../theme';
 import {
   SplitScreenLayoutType,
@@ -68,7 +69,7 @@ export const SplitScreenModal: React.FC<SplitScreenModalProps> = ({
                   <Text style={styles.backBtnText}>← Back</Text>
                 </TouchableOpacity>
               </View>
-              <ScrollView style={styles.jsonScroll}>
+              <ScrollView keyboardShouldPersistTaps="handled" style={styles.jsonScroll}>
                 <Text style={styles.jsonCode}>{draftJsonPreview}</Text>
               </ScrollView>
               <TouchableOpacity
@@ -82,7 +83,7 @@ export const SplitScreenModal: React.FC<SplitScreenModalProps> = ({
             </View>
           ) : (
             /* Layout Selection View */
-            <ScrollView style={styles.body} showsVerticalScrollIndicator={false}>
+            <ScrollView keyboardShouldPersistTaps="handled" style={styles.body} showsVerticalScrollIndicator={false}>
               {/* Layout Picker Cards */}
               <Text style={styles.sectionTitle}>Select Collage Layout</Text>
               <View style={styles.grid}>

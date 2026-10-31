@@ -68,6 +68,14 @@ export class TimelineEngine {
     this.maxHistorySize = maxHistorySize;
   }
 
+  public updateSettings(settings: Project['settings']): void {
+    this.state = { ...this.state, project: { ...this.state.project, settings }, isDirty: true };
+  }
+
+  public updateAssets(assets: Project["assets"]): void {
+    this.state = { ...this.state, project: { ...this.state.project, assets }, isDirty: true };
+  }
+
   public getState(): TimelineState {
     return this.state;
   }
@@ -398,6 +406,22 @@ export class TimelineEngine {
       clips: updatedClips,
       isDirty: true,
     });
+  }
+
+  public toggleTrackMute(trackId: string): void {
+    const track = this.state.project.tracks.find((t) => t.id === trackId);
+    if (!track) return;
+    const updatedTracks = this.state.project.tracks.map((t) =>
+      t.id === trackId ? { ...t, isMuted: !t.isMuted } : t
+    );
+    this.state = {
+      ...this.state,
+      project: {
+        ...this.state.project,
+        tracks: updatedTracks,
+      },
+      isDirty: true,
+    };
   }
 
   public updateAudioProperties(

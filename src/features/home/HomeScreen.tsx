@@ -1,3 +1,4 @@
+import { AppModal as Modal } from '../../components/AppModal';
 import React, { useState, useEffect } from 'react';
 import {
   View,
@@ -5,7 +6,6 @@ import {
   StyleSheet,
   TouchableOpacity,
   ScrollView,
-  Modal,
   TextInput,
   Alert,
 } from 'react-native';
@@ -24,6 +24,7 @@ import { useGuaranteedInsets } from '../../navigation/safeArea';
 import {
   pickPhotoFromGallery,
   capturePhotoWithCamera,
+  pickVideoFromStorage,
 } from '../../services/mediaImport';
 
 export interface HomeScreenProps {
@@ -85,7 +86,11 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
   };
 
   useEffect(() => {
-    loadProjects();
+    let active = true;
+    defaultProjectStorage.listProjects().then(list => {
+      if (active) { setProjects(list); setLoading(false); }
+    });
+    return () => { active = false; };
   }, []);
 
   const handleCreateProject = async () => {
@@ -99,13 +104,25 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
   };
 
   const handleCreateWithGalleryMedia = async () => {
-    const title = newProjectTitle.trim() || 'Untitled Project';
-    const project = defaultProjectStorage.createProject(title, selectedRatio);
-    await defaultProjectStorage.saveProject(project);
-    setCreateModalVisible(false);
-    setNewProjectTitle('');
-    await loadProjects();
-    onOpenProject(project.metadata.id);
+    try {
+      const title = newProjectTitle.trim() || 'Untitled Project';
+      const project = defaultProjectStorage.createProject(title, selectedRatio);
+      const track = project.tracks.find(t => t.type === 'video');
+      if (!track) return;
+      const result = await pickVideoFromStorage(track.id, 0, 'all');
+      if (!result) return;
+      project.assets = { [result.asset.id]: result.asset };
+      project.clips = { [result.clip.id]: result.clip };
+      track.clips = [result.clip.id];
+      project.metadata.durationUs = result.clip.timelineRange.durationUs;
+      await defaultProjectStorage.saveProject(project);
+      setCreateModalVisible(false);
+      setNewProjectTitle('');
+      await loadProjects();
+      onOpenProject(project.metadata.id);
+    } catch (error) {
+      Alert.alert('Import failed', error instanceof Error ? error.message : String(error));
+    }
   };
 
   const handlePickPhotoFromGallery = async () => {
@@ -353,7 +370,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
               <Text style={styles.emptyIcon}>🎞️</Text>
               <Text style={styles.emptyTitle}>No Projects Yet</Text>
               <Text style={styles.emptySubtitle}>
-                Tap "New Project" above to create your first edit, or choose a viral template.
+                Tap &quot;New Project&quot; above to create your first edit, or choose a viral template.
               </Text>
             </View>
           )}
@@ -413,7 +430,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
         onRequestClose={() => setCreateModalVisible(false)}
       >
         <View style={styles.modalOverlay}>
-          <View style={styles.modalContent}>
+          <ScrollView keyboardShouldPersistTaps="handled" style={{ width: '100%', maxWidth: 560, maxHeight: '100%' }} contentContainerStyle={styles.modalContent}>
             <Text style={styles.modalTitle}>Create New Video Project</Text>
 
             <Text style={styles.inputLabel}>Project Title</Text>
@@ -476,7 +493,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
                 style={styles.modalBtn}
               />
             </View>
-          </View>
+          </ScrollView>
         </View>
       </Modal>
 
@@ -488,7 +505,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
         onRequestClose={() => setPhotoModalVisible(false)}
       >
         <View style={styles.modalOverlay}>
-          <View style={styles.modalContent}>
+          <ScrollView keyboardShouldPersistTaps="handled" style={{ width: '100%', maxWidth: 560, maxHeight: '100%' }} contentContainerStyle={styles.modalContent}>
             <Text style={styles.modalTitle}>Photo Studio & Retouch 📸</Text>
             <Text style={styles.uploadModalSubtitle}>
               Select a photo from your gallery to edit, retouch, remove background, or apply aesthetic filters.
@@ -546,7 +563,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
             >
               <Text style={styles.cancelUploadText}>Cancel</Text>
             </TouchableOpacity>
-          </View>
+          </ScrollView>
         </View>
       </Modal>
     </View>
@@ -935,9 +952,15 @@ const styles = StyleSheet.create({
     alignSelf: 'center',
   },
   bottomTab: {
+    minWidth: 48,
+    minHeight: 48,
+    justifyContent: 'center',
     alignItems: 'center',
   },
   bottomTabActive: {
+    minWidth: 48,
+    minHeight: 48,
+    justifyContent: 'center',
     alignItems: 'center',
   },
   bottomTabIcon: {

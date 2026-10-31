@@ -1,3 +1,4 @@
+import { AppModal as Modal } from '../../components/AppModal';
 import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import {
   View,
@@ -5,18 +6,19 @@ import {
   StyleSheet,
   ScrollView,
   TouchableOpacity,
-  Dimensions,
-  Modal,
+  useWindowDimensions,
   Alert,
   ActivityIndicator,
   Platform,
   PanResponder,
+  LayoutAnimation,
+  UIManager,
 } from 'react-native';
 import { colors, spacing, borderRadius } from '../../theme';
 import { Header } from '../../components/Header';
 import { Button } from '../../components/Button';
-import { Project, AspectRatio } from '../../core/models/project';
-import { Clip, VideoClip, AudioClip, TextOverlay, SpeedCurve, BlendMode, ImageClip, KeyframeTrack } from '../../core/models/clip';
+import { Project, AspectRatio, DEFAULT_PROJECT_SETTINGS } from '../../core/models/project';
+import { Clip, VideoClip, AudioClip, TextOverlay, ImageClip, KeyframeTrack } from '../../core/models/clip';
 import { defaultProjectStorage } from '../../core/persistence/storage';
 import {
   TimelineEngine,
@@ -51,7 +53,10 @@ import { VIRAL_TEMPLATES, compileProjectFromTemplate } from '../../core/template
 import { useGuaranteedInsets } from '../../navigation/safeArea';
 import { AnimatedPlayhead, LottieAudioVisualizer } from '../../components/animations';
 import { FilmoraStudioModal } from '../filmora/FilmoraStudioModal';
-import { AudioDuckingEngine } from '../../core/filmora/audioDuckingEngine';
+
+if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
+  UIManager.setLayoutAnimationEnabledExperimental(true);
+}
 
 export interface EditorScreenProps {
   projectId: string;
@@ -61,7 +66,6 @@ export interface EditorScreenProps {
 
 const TRACK_HEADER_WIDTH = 64;
 const PIXELS_PER_SEC_DEFAULT = 60; // 60px per second on default zoom
-const WAVEFORM_PREVIEW_HEIGHTS = [4, 7, 10, 6, 9, 12, 8, 5, 11, 13, 7, 4] as const;
 
 const RATIO_OPTIONS: { ratio: AspectRatio; label: string; desc: string }[] = [
   { ratio: '9:16', label: '9:16', desc: 'TikTok, Reels, Shorts' },
@@ -76,11 +80,38 @@ export const EditorScreen: React.FC<EditorScreenProps> = ({
   onExport,
 }) => {
   const insets = useGuaranteedInsets();
+  const { width: windowWidth, height: windowHeight } = useWindowDimensions();
   const [project, setProject] = useState<Project | null>(null);
   const [engine, setEngine] = useState<TimelineEngine | null>(null);
   const [state, setState] = useState<TimelineState | null>(null);
   const [isPlaying, setIsPlaying] = useState(false);
   const [pixelsPerSec, setPixelsPerSec] = useState(PIXELS_PER_SEC_DEFAULT);
+  const [isTimelineCollapsed, setIsTimelineCollapsed] = useState(false);
+
+  const toggleTimelineModal = useCallback(() => {
+    LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+    setIsTimelineCollapsed((prev) => !prev);
+  }, []);
+
+  const timelineModalPanResponder = useMemo(
+    () =>
+      PanResponder.create({
+        onStartShouldSetPanResponder: () => false,
+        onMoveShouldSetPanResponder: (_, gestureState) => Math.abs(gestureState.dy) > 12,
+        onPanResponderRelease: (_, gestureState) => {
+          if (gestureState.dy > 25 || gestureState.vy > 0.3) {
+            // Dragged down -> collapse timeline to show full video preview
+            LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+            setIsTimelineCollapsed(true);
+          } else if (gestureState.dy < -25 || gestureState.vy < -0.3) {
+            // Dragged up -> expand timeline for editing
+            LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+            setIsTimelineCollapsed(false);
+          }
+        },
+      }),
+    []
+  );
 
   // Modals
   const [filterModalVisible, setFilterModalVisible] = useState(false);
@@ -148,7 +179,7 @@ export const EditorScreen: React.FC<EditorScreenProps> = ({
 
   const selectedClip = useMemo(
     () => (state?.selectedClipId ? state.clips[state.selectedClipId] : null),
-    [state?.selectedClipId, state?.clips]
+    [state]
   );
 
   const activeMediaClip = useMemo(() => {
@@ -194,7 +225,7 @@ export const EditorScreen: React.FC<EditorScreenProps> = ({
   const clipLocalSeekTimeMs = useMemo(() => {
     if (!state || !activeMediaClip) return 0;
     const offsetUs = state.playheadUs - activeMediaClip.timelineRange.startUs;
-    const sourceUs = ((activeMediaClip as any).sourceRange?.startUs || 0) + Math.max(0, offsetUs);
+    const sourceUs = ((activeMediaClip as any).sourceRange?.startUs || 0) + Math.max(0, offsetUs) * (activeMediaClip.type === 'video' ? activeMediaClip.speed : 1);
     return Math.round(sourceUs / 1000);
   }, [state?.playheadUs, activeMediaClip]);
 
@@ -206,7 +237,7 @@ export const EditorScreen: React.FC<EditorScreenProps> = ({
 
       const currentLocalUs = currentLocalMs * 1000;
       const timelineOffsetUs = currentLocalUs - ((activeMediaClip as any).sourceRange?.startUs || 0);
-      const newPlayheadUs = activeMediaClip.timelineRange.startUs + Math.max(0, timelineOffsetUs);
+      const newPlayheadUs = activeMediaClip.timelineRange.startUs + Math.max(0, timelineOffsetUs) / activeMediaClip.speed;
 
       const clipEndUs = activeMediaClip.timelineRange.startUs + activeMediaClip.timelineRange.durationUs;
       if (newPlayheadUs >= clipEndUs) {
@@ -238,7 +269,7 @@ export const EditorScreen: React.FC<EditorScreenProps> = ({
     const isActualHardwareVideo =
       Platform.OS !== 'web' &&
       activeMediaClip?.type === 'video' &&
-      activeVideoUri &&
+      Boolean(activeVideoUri) &&
       !isImageUri(activeVideoUri);
 
     if (isActualHardwareVideo) {
@@ -286,10 +317,16 @@ export const EditorScreen: React.FC<EditorScreenProps> = ({
 
   const rulerMarks = useMemo(() => {
     const count = Math.ceil(durationUs / MICROS_PER_SECOND) + 8;
-    return Array.from({ length: count }, (_, i) => ({
-      index: i,
-      left: timeUsToPixels(secondsToMicros(i), pixelsPerSec),
-    }));
+    return Array.from({ length: count }, (_, i) => {
+      const minutes = Math.floor(i / 60);
+      const seconds = i % 60;
+      const timecode = `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
+      return {
+        index: i,
+        timecode,
+        left: timeUsToPixels(secondsToMicros(i), pixelsPerSec),
+      };
+    });
   }, [durationUs, pixelsPerSec]);
 
   // Actions
@@ -458,6 +495,55 @@ export const EditorScreen: React.FC<EditorScreenProps> = ({
     setState({ ...engine.getState() });
   }, [engine, state?.selectedClipId]);
 
+  const handleExtractAudio = useCallback(() => {
+    if (!engine || !state || !selectedClip || selectedClip.type !== 'video') {
+      Alert.alert('Extract Audio', 'Select a video clip to extract its audio.');
+      return;
+    }
+
+    const audioTrack = state.project.tracks.find((t) => t.type === 'audio');
+    if (!audioTrack) {
+      Alert.alert('No Audio Track', 'Audio track not found in this project.');
+      return;
+    }
+
+    const audioClipId = `clip_aud_ext_${Date.now()}`;
+    const cleanName = selectedClip.name.replace(/\.[^/.]+$/, '');
+    const newAudioClip: AudioClip = {
+      id: audioClipId,
+      trackId: audioTrack.id,
+      type: 'audio',
+      name: `🎵 ${cleanName} (Audio)`,
+      assetId: selectedClip.assetId,
+      timelineRange: { ...selectedClip.timelineRange },
+      sourceRange: { ...selectedClip.sourceRange },
+      volume: selectedClip.volume ?? 1.0,
+      fadeInDurationUs: 0,
+      fadeOutDurationUs: 0,
+      speed: selectedClip.speed ?? 1.0,
+    };
+
+    // Mute video clip volume so it does not double-play with the extracted track
+    engine.updateAudioProperties(selectedClip.id, { volume: 0 });
+    engine.addClip(audioTrack.id, newAudioClip);
+    engine.selectClip(audioClipId);
+
+    const updated = engine.getState();
+    setState({ ...updated });
+    defaultProjectStorage.saveProject({ ...updated.project, clips: updated.clips });
+
+    Alert.alert('Audio Extracted! 🎵', `Extracted audio from "${selectedClip.name}" into the Audio track.`);
+  }, [engine, state, selectedClip]);
+
+  const handleToggleTrackMute = useCallback(
+    (trackId: string) => {
+      if (!engine) return;
+      engine.toggleTrackMute(trackId);
+      setState({ ...engine.getState() });
+    },
+    [engine]
+  );
+
   const handleMoveLeft = useCallback(() => {
     if (!engine || !state || !state.selectedClipId) return;
     const clip = state.clips[state.selectedClipId];
@@ -546,7 +632,7 @@ export const EditorScreen: React.FC<EditorScreenProps> = ({
       if (res) {
         setAssetUriMap((prev) => ({ ...prev, [res.asset.id]: res.asset.uri }));
         const updatedAssets = { ...(state.project.assets || {}), [res.asset.id]: res.asset };
-        state.project.assets = updatedAssets;
+        engine.updateAssets(updatedAssets);
         engine.addClip(videoTrack.id, res.clip);
         setState({ ...engine.getState() });
       }
@@ -557,19 +643,15 @@ export const EditorScreen: React.FC<EditorScreenProps> = ({
 
   const handleSelectAspectRatio = useCallback(
     (ratio: AspectRatio) => {
-      if (!project || !state) return;
-      const updatedProject: Project = {
-        ...project,
-        settings: {
-          ...project.settings,
-          aspectRatio: ratio,
-        },
-      };
-      setProject(updatedProject);
-      defaultProjectStorage.saveProject(updatedProject);
+      if (!engine || !state) return;
+      engine.updateSettings({ ...state.project.settings, ...DEFAULT_PROJECT_SETTINGS[ratio], aspectRatio: ratio });
+      const updated = engine.getState();
+      setState({ ...updated });
+      setProject(updated.project);
+      defaultProjectStorage.saveProject({ ...updated.project, clips: updated.clips });
       setRatioModalVisible(false);
     },
-    [project, state]
+    [engine, state]
   );
 
   // Add Demo Media Clip to test editing capabilities
@@ -580,7 +662,6 @@ export const EditorScreen: React.FC<EditorScreenProps> = ({
       const clipDurationUs = secondsToMicros(4); // 4 seconds duration
       const startUs = durationUs; // append at the end of the timeline
 
-      let newClip: Clip;
       if (type === 'video') {
         const videoTrack = state.project.tracks.find((t) => t.type === 'video')!;
         const sampleVideoUri = 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4';
@@ -603,9 +684,9 @@ export const EditorScreen: React.FC<EditorScreenProps> = ({
           },
           createdAt: Date.now(),
         };
-        state.project.assets = { ...(state.project.assets || {}), [assetId]: sampleAsset };
+        engine.updateAssets({ ...(state.project.assets || {}), [assetId]: sampleAsset });
 
-        newClip = {
+        const newClip: Clip = {
           id: `clip_vid_${Date.now()}`,
           trackId: videoTrack.id,
           type: 'video',
@@ -632,7 +713,7 @@ export const EditorScreen: React.FC<EditorScreenProps> = ({
         engine.addClip(videoTrack.id, newClip);
       } else if (type === 'audio') {
         const audioTrack = state.project.tracks.find((t) => t.type === 'audio')!;
-        newClip = {
+        const newClip: Clip = {
           id: `clip_aud_${Date.now()}`,
           trackId: audioTrack.id,
           type: 'audio',
@@ -648,7 +729,7 @@ export const EditorScreen: React.FC<EditorScreenProps> = ({
         engine.addClip(audioTrack.id, newClip);
       } else {
         const textTrack = state.project.tracks.find((t) => t.type === 'text')!;
-        newClip = {
+        const newClip: Clip = {
           id: `clip_txt_${Date.now()}`,
           trackId: textTrack.id,
           type: 'text',
@@ -675,34 +756,26 @@ export const EditorScreen: React.FC<EditorScreenProps> = ({
   );
 
   // Rendering aspect ratio styles
-  const windowWidth = Dimensions.get('window').width;
   const isDesktop = Platform.OS === 'web' && windowWidth > 768;
-  const isTablet = windowWidth >= 768 && windowWidth <= 1024;
   const currentRatio = project?.settings.aspectRatio || '9:16';
   const playerViewportStyle = useMemo(() => {
-    const baseHeight = isDesktop ? 350 : isTablet ? 280 : 230;
-    switch (currentRatio) {
-      case '9:16':
-        return { aspectRatio: 9 / 16, height: baseHeight };
-      case '16:9':
-        return { aspectRatio: 16 / 9, height: Math.round(baseHeight * 0.78) };
-      case '1:1':
-        return { aspectRatio: 1, height: Math.round(baseHeight * 0.9) };
-      case '4:5':
-        return { aspectRatio: 4 / 5, height: Math.round(baseHeight * 0.95) };
-      default:
-        return { aspectRatio: 9 / 16, height: baseHeight };
-    }
-  }, [currentRatio, isDesktop, isTablet]);
+    const [w, h] = currentRatio.split(':').map(Number);
+    const ratio = w / h;
+    const availableHeight = isTimelineCollapsed
+      ? Math.max(180, windowHeight - insets.top - insets.bottom - 120)
+      : Math.max(96, Math.min(360, (windowHeight - insets.top - insets.bottom) * 0.32));
+    const width = Math.min(windowWidth - insets.left - insets.right - 24, availableHeight * ratio);
+    return { width, height: width / ratio };
+  }, [currentRatio, windowWidth, windowHeight, insets, isTimelineCollapsed]);
 
   // Timeline UI rendering
   const timelineWidth = useMemo(
     () =>
       Math.max(
-        Dimensions.get('window').width,
+        windowWidth,
         TRACK_HEADER_WIDTH + timeUsToPixels(durationUs + secondsToMicros(6), pixelsPerSec)
       ),
-    [durationUs, pixelsPerSec]
+    [durationUs, pixelsPerSec, windowWidth]
   );
 
   const playheadPixelX = useMemo(
@@ -713,7 +786,6 @@ export const EditorScreen: React.FC<EditorScreenProps> = ({
   // Auto-scroll timeline to follow playhead during playback
   useEffect(() => {
     if (!isPlaying || !timelineScrollRef.current) return;
-    const windowWidth = Dimensions.get('window').width;
     const absolutePlayheadX = TRACK_HEADER_WIDTH + playheadPixelX;
     if (absolutePlayheadX > windowWidth * 0.75) {
       timelineScrollRef.current.scrollTo({
@@ -721,7 +793,7 @@ export const EditorScreen: React.FC<EditorScreenProps> = ({
         animated: false,
       });
     }
-  }, [isPlaying, playheadPixelX]);
+  }, [isPlaying, playheadPixelX, windowWidth]);
 
   // Scroll back to start when playhead resets to 0
   useEffect(() => {
@@ -898,7 +970,10 @@ export const EditorScreen: React.FC<EditorScreenProps> = ({
 
             <TouchableOpacity
               style={styles.exportHeaderBtn}
-              onPress={() => onExport(project.metadata.id)}
+              onPress={async () => {
+                await defaultProjectStorage.saveProject({ ...state.project, clips: state.clips });
+                onExport(project.metadata.id);
+              }}
               activeOpacity={0.8}
             >
               <Text style={styles.exportHeaderBtnText}>Export ↑</Text>
@@ -908,10 +983,11 @@ export const EditorScreen: React.FC<EditorScreenProps> = ({
       />
 
       {/* Video Player Canvas Viewport */}
-      <View style={styles.previewContainer}>
-        <View style={[styles.playerCanvas, playerViewportStyle]}>
+      <View style={[styles.previewContainer, isTimelineCollapsed && styles.previewContainerExpanded]}>
+        <View style={[styles.playerCanvas, playerViewportStyle, !activeVideoUri && { width: windowWidth - 24 }]}>
           <VideoPlayerView
             videoUri={activeVideoUri}
+            mediaType={activeMediaClip?.type}
             isPlaying={isPlaying}
             seekTimeMs={clipLocalSeekTimeMs}
             tintColor={
@@ -919,6 +995,15 @@ export const EditorScreen: React.FC<EditorScreenProps> = ({
                 ? LUT_FILTERS_CATALOG.find((l) => l.id === (activeMediaClip as any).lutFilterId)?.tintRgba
                 : undefined
             }
+            volume={
+              state.project.tracks.find((t) => t.type === 'video')?.isMuted
+                ? 0
+                : activeMediaClip?.type === 'video'
+                ? activeMediaClip.volume
+                : 0
+            }
+            speed={activeMediaClip?.type === 'video' ? activeMediaClip.speed : 1}
+            visualEffectIntensity={activeMediaClip?.visualEffectIntensity}
             visualEffect={activeMediaClip ? (activeMediaClip as any).visualEffect : undefined}
             transform={
               activeMediaClip
@@ -939,11 +1024,114 @@ export const EditorScreen: React.FC<EditorScreenProps> = ({
               </Text>
             </View>
           )}
+
+          {/* Fullscreen / Timeline Collapse Toggle Icon on Canvas */}
+          <TouchableOpacity
+            style={styles.canvasFullscreenToggleBtn}
+            onPress={toggleTimelineModal}
+            activeOpacity={0.8}
+            hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+          >
+            <Text style={styles.canvasFullscreenToggleIcon}>
+              {isTimelineCollapsed ? '⤡' : '⤢'}
+            </Text>
+          </TouchableOpacity>
         </View>
       </View>
 
-      {/* Floating Transport Bar Above Timeline */}
-      <View style={styles.transportBar}>
+      {isTimelineCollapsed ? (
+        /* COLLAPSED TIMELINE: Mini Floating Playback HUD Bar */
+        <View
+          style={[
+            styles.collapsedTimelineBar,
+            { paddingBottom: Math.max(insets.bottom, spacing.xs) },
+          ]}
+        >
+          {/* Slide Up Drag Handle */}
+          <View
+            style={styles.sheetHandleGripWrapper}
+            {...timelineModalPanResponder.panHandlers}
+          >
+            <View style={styles.sheetHandleGripBar} />
+            <Text style={styles.sheetHandleHintText}>▲ Slide up for timeline</Text>
+          </View>
+
+          <View style={styles.collapsedControlsRow}>
+            {/* Left: Timecode */}
+            <View style={styles.collapsedTimecodePill}>
+              <Text style={styles.collapsedTimecodeText}>
+                {formatTimecode(state?.playheadUs || 0)} / {formatTimecode(durationUs)}
+              </Text>
+            </View>
+
+            {/* Center: Playback Controls */}
+            <View style={styles.collapsedPlaybackGroup}>
+              <TouchableOpacity
+                style={styles.collapsedTransportBtn}
+                onPress={() => handleStepFrame(-1)}
+              >
+                <Text style={styles.transportIcon}>|◀</Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={styles.collapsedPlayPauseBtn}
+                onPress={handleTogglePlay}
+              >
+                <Text style={styles.playPauseIcon}>{isPlaying ? '⏸' : '▶'}</Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={styles.collapsedTransportBtn}
+                onPress={() => handleStepFrame(1)}
+              >
+                <Text style={styles.transportIcon}>▶|</Text>
+              </TouchableOpacity>
+
+              <LottieAudioVisualizer isPlaying={isPlaying} maxHeight={16} barCount={5} />
+            </View>
+
+            {/* Right: Expand Timeline Button */}
+            <TouchableOpacity
+              style={styles.expandTimelineBtn}
+              onPress={toggleTimelineModal}
+              activeOpacity={0.8}
+            >
+              <Text style={styles.expandTimelineBtnIcon}>▲</Text>
+              <Text style={styles.expandTimelineBtnText}>Timeline</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      ) : (
+        /* EXPANDED TIMELINE: Full Timeline Console with Modal Drawer Handle */
+        <View style={styles.expandedTimelineSection}>
+          {/* Modal Handle Header (Slide Down to Preview) */}
+          <View
+            style={styles.sheetHandleHeader}
+            {...timelineModalPanResponder.panHandlers}
+          >
+            <View style={styles.sheetHandleHeaderLeft}>
+              <Text style={styles.sheetHandleHeaderIcon}>🎬</Text>
+              <Text style={styles.sheetHandleHeaderTitle}>TIMELINE</Text>
+            </View>
+
+            {/* Central Grip Handle for Swiping Down */}
+            <View style={styles.sheetHandleCenterGrip}>
+              <View style={styles.sheetHandleGripBar} />
+            </View>
+
+            {/* Right: Full Preview Action Button */}
+            <TouchableOpacity
+              style={styles.collapseTimelineBtn}
+              onPress={toggleTimelineModal}
+              activeOpacity={0.8}
+            >
+              <Text style={styles.collapseTimelineBtnIcon}>▼</Text>
+              <Text style={styles.collapseTimelineBtnText}>Full Preview</Text>
+            </TouchableOpacity>
+          </View>
+
+          {/* Floating Transport Bar Above Timeline */}
+          <View style={styles.transportBar}>
         {/* Undo / Redo */}
         <View style={styles.undoRedoGroup}>
           <TouchableOpacity
@@ -1037,10 +1225,11 @@ export const EditorScreen: React.FC<EditorScreenProps> = ({
       </View>
 
       {/* Multitrack Timeline Section */}
-      <View style={styles.timelineContainer}>
+      <ScrollView style={styles.timelineContainer} nestedScrollEnabled scrollEnabled={!isDraggingTimeline} contentContainerStyle={{ flexGrow: 1 }}>
         <ScrollView
           ref={timelineScrollRef}
           horizontal
+          nestedScrollEnabled
           scrollEnabled={!isDraggingTimeline}
           showsHorizontalScrollIndicator
           style={styles.timelineScrollView}
@@ -1065,7 +1254,7 @@ export const EditorScreen: React.FC<EditorScreenProps> = ({
                   { left: TRACK_HEADER_WIDTH + mark.left },
                 ]}
               >
-                <Text style={styles.rulerText}>{mark.index}s</Text>
+                <Text style={styles.rulerText}>{mark.timecode}</Text>
                 <View style={styles.rulerTick} />
                 <View style={[styles.rulerSubTick, { left: 15 }]} />
                 <View style={[styles.rulerSubTick, { left: 30 }]} />
@@ -1081,32 +1270,101 @@ export const EditorScreen: React.FC<EditorScreenProps> = ({
                 .map((id) => state.clips[id])
                 .filter(Boolean);
 
-              const trackIcon =
-                track.type === 'video'
-                  ? '🎬'
-                  : track.type === 'audio'
-                  ? '🎵'
-                  : track.type === 'text'
-                  ? '📝'
-                  : '🔲';
-              const trackLabel =
-                track.type === 'video'
-                  ? 'Video'
-                  : track.type === 'audio'
-                  ? 'Audio'
-                  : track.type === 'text'
-                  ? 'Text'
-                  : 'Overlay';
+              const isVideoTrack = track.type === 'video';
+              const isAudioTrack = track.type === 'audio';
+              const isTextTrack = track.type === 'text';
 
               return (
-                <View key={track.id} style={styles.trackRow}>
-                  <View style={styles.trackLabel}>
-                    <Text style={styles.trackLabelIcon}>{trackIcon}</Text>
-                    <Text style={styles.trackLabelText} numberOfLines={1}>
-                      {trackLabel}
-                    </Text>
+                <View
+                  key={track.id}
+                  style={[
+                    styles.trackRow,
+                    isVideoTrack && styles.videoTrackRow,
+                    isAudioTrack && styles.audioTrackRow,
+                    isTextTrack && styles.textTrackRow,
+                  ]}
+                >
+                  {/* CapCut Track Left Header */}
+                  <View
+                    style={[
+                      styles.trackLabel,
+                      isVideoTrack && styles.videoTrackLabel,
+                    ]}
+                  >
+                    {isVideoTrack ? (
+                      <View style={styles.videoTrackHeaderCol}>
+                        <TouchableOpacity
+                          style={styles.trackCoverBtn}
+                          onPress={() => Alert.alert('Cover', 'Project cover photo set from current playhead frame.')}
+                          activeOpacity={0.7}
+                        >
+                          <Text style={styles.trackCoverIcon}>🖼️</Text>
+                          <Text style={styles.trackCoverText}>Cover</Text>
+                        </TouchableOpacity>
+
+                        <TouchableOpacity
+                          style={[
+                            styles.trackMuteBtn,
+                            track.isMuted && styles.trackMuteBtnActive,
+                          ]}
+                          onPress={() => handleToggleTrackMute(track.id)}
+                          activeOpacity={0.7}
+                        >
+                          <Text style={styles.trackMuteIcon}>{track.isMuted ? '🔇' : '🔊'}</Text>
+                          <Text
+                            style={[
+                              styles.trackMuteText,
+                              track.isMuted && styles.trackMuteTextActive,
+                            ]}
+                          >
+                            {track.isMuted ? 'Muted' : 'Mute'}
+                          </Text>
+                        </TouchableOpacity>
+                      </View>
+                    ) : isAudioTrack ? (
+                      <View style={styles.secondaryTrackHeaderCol}>
+                        <Text style={styles.trackLabelIcon}>🎵</Text>
+                        <Text style={styles.trackLabelText}>Audio</Text>
+                      </View>
+                    ) : isTextTrack ? (
+                      <View style={styles.secondaryTrackHeaderCol}>
+                        <Text style={styles.trackLabelIcon}>🔤</Text>
+                        <Text style={styles.trackLabelText}>Text</Text>
+                      </View>
+                    ) : (
+                      <View style={styles.secondaryTrackHeaderCol}>
+                        <Text style={styles.trackLabelIcon}>🔲</Text>
+                        <Text style={styles.trackLabelText}>Overlay</Text>
+                      </View>
+                    )}
                   </View>
+
+                  {/* Track Content / Clips Area */}
                   <View style={styles.trackContent}>
+                    {/* If Audio track is empty, render CapCut "+ Add audio" prompt pill */}
+                    {isAudioTrack && trackClips.length === 0 && (
+                      <TouchableOpacity
+                        style={styles.emptyTrackAddPrompt}
+                        onPress={() => setAudioModalVisible(true)}
+                        activeOpacity={0.7}
+                      >
+                        <Text style={styles.emptyTrackPromptIcon}>🎵</Text>
+                        <Text style={styles.emptyTrackPromptText}>+ Add audio</Text>
+                      </TouchableOpacity>
+                    )}
+
+                    {/* If Text track is empty, render CapCut "+ Add text" prompt pill */}
+                    {isTextTrack && trackClips.length === 0 && (
+                      <TouchableOpacity
+                        style={styles.emptyTrackAddPrompt}
+                        onPress={() => setSubtitleModalVisible(true)}
+                        activeOpacity={0.7}
+                      >
+                        <Text style={styles.emptyTrackPromptIcon}>🔤</Text>
+                        <Text style={styles.emptyTrackPromptText}>+ Add text</Text>
+                      </TouchableOpacity>
+                    )}
+
                     {trackClips.map((clip, clipIndex) => {
                       const isSelected = state.selectedClipId === clip.id;
 
@@ -1151,7 +1409,7 @@ export const EditorScreen: React.FC<EditorScreenProps> = ({
             isPlaying={isPlaying}
           />
         </ScrollView>
-      </View>
+      </ScrollView>
 
       {/* CapCut Two-Level Bottom Editing Dock */}
       <View
@@ -1159,13 +1417,13 @@ export const EditorScreen: React.FC<EditorScreenProps> = ({
           styles.dockContainer,
           {
             paddingBottom: insets.bottom,
-            height: 64 + insets.bottom,
+            minHeight: 72 + insets.bottom,
           },
         ]}
       >
         {selectedClip ? (
           /* LEVEL 2: CLIP EDITING SUB-DOCK (When a clip is selected) */
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.dockScroll}>
+          <ScrollView keyboardShouldPersistTaps="handled" horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.dockScroll}>
             {/* Deselect Back Arrow */}
             <TouchableOpacity
               style={styles.dockActionBtnPrimary}
@@ -1217,6 +1475,16 @@ export const EditorScreen: React.FC<EditorScreenProps> = ({
               <Text style={styles.dockActionIcon}>🔊</Text>
               <Text style={styles.dockActionLabel}>Volume</Text>
             </TouchableOpacity>
+
+            {selectedClip.type === 'video' && (
+              <TouchableOpacity
+                style={styles.dockActionBtn}
+                onPress={handleExtractAudio}
+              >
+                <Text style={styles.dockActionIcon}>🎵⬇️</Text>
+                <Text style={styles.dockActionLabel}>Extract</Text>
+              </TouchableOpacity>
+            )}
 
             <TouchableOpacity
               style={styles.dockActionBtn}
@@ -1274,7 +1542,7 @@ export const EditorScreen: React.FC<EditorScreenProps> = ({
           </ScrollView>
         ) : (
           /* LEVEL 1: PROJECT LEVEL PRIMARY DOCK (No clip selected) */
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.dockScroll}>
+          <ScrollView keyboardShouldPersistTaps="handled" horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.dockScroll}>
             <TouchableOpacity
               style={styles.dockActionBtn}
               onPress={() => {
@@ -1402,6 +1670,8 @@ export const EditorScreen: React.FC<EditorScreenProps> = ({
           </ScrollView>
         )}
       </View>
+    </View>
+  )}
 
       {/* Aspect Ratio Switcher Modal */}
       <Modal
@@ -1666,6 +1936,11 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: colors.border,
   },
+  previewContainerExpanded: {
+    flex: 1,
+    paddingVertical: spacing.sm,
+    borderBottomWidth: 0,
+  },
   playerCanvas: {
     backgroundColor: colors.surface,
     alignItems: 'center',
@@ -1673,6 +1948,23 @@ const styles = StyleSheet.create({
     borderRadius: borderRadius.xs,
     position: 'relative',
     overflow: 'hidden',
+  },
+  canvasFullscreenToggleBtn: {
+    position: 'absolute',
+    top: 8,
+    right: 8,
+    backgroundColor: 'rgba(0, 0, 0, 0.65)',
+    borderRadius: 6,
+    paddingHorizontal: 8,
+    paddingVertical: 5,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.2)',
+    zIndex: 10,
+  },
+  canvasFullscreenToggleIcon: {
+    color: '#FFFFFF',
+    fontSize: 14,
+    fontWeight: 'bold',
   },
   canvasTimecodePill: {
     position: 'absolute',
@@ -1688,8 +1980,151 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     fontVariant: ['tabular-nums'],
   },
+  expandedTimelineSection: {
+    flex: 1,
+  },
+  sheetHandleHeader: {
+    height: 32,
+    backgroundColor: colors.surface,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: spacing.md,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.border,
+  },
+  sheetHandleHeaderLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+  },
+  sheetHandleHeaderIcon: {
+    fontSize: 12,
+  },
+  sheetHandleHeaderTitle: {
+    color: colors.textSecondary,
+    fontSize: 10,
+    fontWeight: '700',
+    letterSpacing: 1,
+  },
+  sheetHandleCenterGrip: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    alignItems: 'center',
+    justifyContent: 'center',
+    pointerEvents: 'none',
+  },
+  sheetHandleGripBar: {
+    width: 36,
+    height: 4,
+    borderRadius: 2,
+    backgroundColor: 'rgba(255, 255, 255, 0.3)',
+  },
+  collapseTimelineBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    backgroundColor: colors.surfaceLight,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  collapseTimelineBtnIcon: {
+    color: colors.primary,
+    fontSize: 10,
+    fontWeight: '900',
+  },
+  collapseTimelineBtnText: {
+    color: colors.textPrimary,
+    fontSize: 10,
+    fontWeight: '600',
+  },
+  collapsedTimelineBar: {
+    backgroundColor: colors.surface,
+    borderTopWidth: 1,
+    borderTopColor: colors.border,
+    paddingHorizontal: spacing.md,
+    paddingTop: 6,
+  },
+  sheetHandleGripWrapper: {
+    alignItems: 'center',
+    paddingVertical: 4,
+  },
+  sheetHandleHintText: {
+    color: colors.textMuted,
+    fontSize: 9,
+    fontWeight: '600',
+    marginTop: 2,
+    letterSpacing: 0.5,
+  },
+  collapsedControlsRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginTop: 2,
+    paddingBottom: 4,
+  },
+  collapsedTimecodePill: {
+    backgroundColor: colors.surfaceLight,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: 4,
+    borderRadius: borderRadius.xs,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  collapsedTimecodeText: {
+    color: colors.accentGold,
+    fontSize: 11,
+    fontWeight: 'bold',
+    fontVariant: ['tabular-nums'],
+  },
+  collapsedPlaybackGroup: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs,
+  },
+  collapsedTransportBtn: {
+    width: 38,
+    height: 38,
+    borderRadius: borderRadius.xs,
+    backgroundColor: colors.surfaceLight,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  collapsedPlayPauseBtn: {
+    width: 38,
+    height: 38,
+    borderRadius: 19,
+    backgroundColor: colors.primary,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  expandTimelineBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    backgroundColor: colors.primary,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 14,
+  },
+  expandTimelineBtnIcon: {
+    color: '#000000',
+    fontSize: 10,
+    fontWeight: '900',
+  },
+  expandTimelineBtnText: {
+    color: '#000000',
+    fontSize: 11,
+    fontWeight: '700',
+  },
   transportBar: {
     flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
     justifyContent: 'space-between',
     alignItems: 'center',
     paddingHorizontal: spacing.md,
@@ -1733,8 +2168,8 @@ const styles = StyleSheet.create({
     gap: spacing.xs,
   },
   transportBtn: {
-    width: 32,
-    height: 32,
+    width: 48,
+    height: 48,
     borderRadius: borderRadius.xs,
     backgroundColor: colors.surfaceLight,
     alignItems: 'center',
@@ -1763,8 +2198,8 @@ const styles = StyleSheet.create({
     marginLeft: 2,
   },
   keyframeDiamondBtn: {
-    width: 32,
-    height: 32,
+    width: 48,
+    height: 48,
     borderRadius: borderRadius.xs,
     backgroundColor: colors.surfaceLight,
     alignItems: 'center',
@@ -1784,8 +2219,8 @@ const styles = StyleSheet.create({
     color: colors.accentGold,
   },
   quickSplitBtn: {
-    width: 32,
-    height: 32,
+    width: 48,
+    height: 48,
     borderRadius: borderRadius.xs,
     backgroundColor: colors.surfaceLight,
     alignItems: 'center',
@@ -1804,6 +2239,10 @@ const styles = StyleSheet.create({
     borderColor: colors.border,
   },
   zoomSubBtn: {
+    minWidth: 44,
+    minHeight: 44,
+    alignItems: 'center',
+    justifyContent: 'center',
     paddingHorizontal: 7,
     paddingVertical: 4,
   },
@@ -1856,11 +2295,13 @@ const styles = StyleSheet.create({
     width: 60,
   },
   rulerText: {
-    color: colors.textMuted,
+    color: '#8E8E93',
     fontSize: 9,
+    fontWeight: '600',
+    fontVariant: ['tabular-nums'],
     position: 'absolute',
     top: 2,
-    left: 3,
+    left: 4,
   },
   rulerTick: {
     position: 'absolute',
@@ -1868,14 +2309,14 @@ const styles = StyleSheet.create({
     left: 0,
     width: 1,
     height: 9,
-    backgroundColor: colors.textMuted,
+    backgroundColor: '#555555',
   },
   rulerSubTick: {
     position: 'absolute',
     bottom: 0,
     width: 1,
     height: 4,
-    backgroundColor: colors.borderLight,
+    backgroundColor: '#333333',
   },
   tracksArea: {
     paddingTop: spacing.xs,
@@ -1887,6 +2328,21 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: spacing.xs,
     position: 'relative',
+    backgroundColor: 'rgba(255, 255, 255, 0.015)',
+    borderBottomWidth: 1,
+    borderBottomColor: 'rgba(255, 255, 255, 0.04)',
+  },
+  videoTrackRow: {
+    height: 66,
+    marginBottom: 8,
+  },
+  audioTrackRow: {
+    height: 48,
+    marginBottom: 6,
+  },
+  textTrackRow: {
+    height: 42,
+    marginBottom: 6,
   },
   trackLabel: {
     width: TRACK_HEADER_WIDTH,
@@ -1899,6 +2355,93 @@ const styles = StyleSheet.create({
     zIndex: 2,
     paddingHorizontal: 2,
     gap: 2,
+  },
+  videoTrackLabel: {
+    paddingVertical: 2,
+  },
+  videoTrackHeaderCol: {
+    flex: 1,
+    justifyContent: 'space-evenly',
+    alignItems: 'center',
+    width: '100%',
+    paddingVertical: 2,
+  },
+  trackCoverBtn: {
+    backgroundColor: 'rgba(255, 255, 255, 0.08)',
+    borderRadius: 4,
+    paddingVertical: 3,
+    paddingHorizontal: 4,
+    alignItems: 'center',
+    flexDirection: 'row',
+    gap: 2,
+    width: 58,
+    justifyContent: 'center',
+  },
+  trackCoverIcon: {
+    fontSize: 9,
+  },
+  trackCoverText: {
+    color: '#D1D5DB',
+    fontSize: 8,
+    fontWeight: '700',
+    letterSpacing: 0.3,
+  },
+  trackMuteBtn: {
+    backgroundColor: 'rgba(255, 255, 255, 0.08)',
+    borderRadius: 4,
+    paddingVertical: 3,
+    paddingHorizontal: 4,
+    alignItems: 'center',
+    flexDirection: 'row',
+    gap: 2,
+    width: 58,
+    justifyContent: 'center',
+  },
+  trackMuteBtnActive: {
+    backgroundColor: 'rgba(244, 63, 94, 0.25)',
+    borderWidth: 1,
+    borderColor: '#F43F5E',
+  },
+  trackMuteIcon: {
+    fontSize: 9,
+  },
+  trackMuteText: {
+    color: '#D1D5DB',
+    fontSize: 8,
+    fontWeight: '700',
+    letterSpacing: 0.3,
+  },
+  trackMuteTextActive: {
+    color: '#F43F5E',
+  },
+  secondaryTrackHeaderCol: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 2,
+  },
+  emptyTrackAddPrompt: {
+    position: 'absolute',
+    top: 6,
+    left: 8,
+    height: 32,
+    paddingHorizontal: 12,
+    borderRadius: 6,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.22)',
+    borderStyle: 'dashed',
+    backgroundColor: 'rgba(255, 255, 255, 0.04)',
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    zIndex: 1,
+  },
+  emptyTrackPromptIcon: {
+    fontSize: 12,
+  },
+  emptyTrackPromptText: {
+    color: 'rgba(255, 255, 255, 0.65)',
+    fontSize: 11,
+    fontWeight: '600',
   },
   trackLabelIcon: {
     fontSize: 14,

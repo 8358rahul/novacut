@@ -1,11 +1,12 @@
+import { AppModal as Modal } from '../../components/AppModal';
 import React, { useState } from 'react';
 import {
   View,
   Text,
   StyleSheet,
-  Modal,
   TouchableOpacity,
   ScrollView,
+  TextInput,
 } from 'react-native';
 import { spacing, borderRadius } from '../../theme';
 import { ColorAdjustments } from '../../core/models/clip';
@@ -15,6 +16,7 @@ import {
   VisualEffectType,
   VisualEffectCategory,
   LutFilterCategory,
+  RENDERABLE_EFFECTS,
 } from '../../core/effects/effectRegistry';
 
 export interface FilterModalProps {
@@ -37,7 +39,11 @@ const EFFECT_CATEGORIES: ('All' | VisualEffectCategory)[] = [
   'Retro',
   'Bling',
   'Motion',
+  'Distortion',
+  'Party',
   'Atmosphere',
+  'Split',
+  'Comic',
 ];
 
 const LUT_CATEGORIES: ('All' | LutFilterCategory)[] = [
@@ -64,10 +70,21 @@ export const FilterModal: React.FC<FilterModalProps> = ({
   const [activeTab, setActiveTab] = useState<'effects' | 'luts' | 'manual'>('effects');
   const [selectedEffectCategory, setSelectedEffectCategory] = useState<'All' | VisualEffectCategory>('All');
   const [selectedLutCategory, setSelectedLutCategory] = useState<'All' | LutFilterCategory>('All');
+  const [searchQuery, setSearchQuery] = useState('');
 
   const filteredEffects = VISUAL_EFFECTS_CATALOG.filter((fx) => {
-    if (selectedEffectCategory === 'All') return true;
-    return fx.category === selectedEffectCategory;
+    if (!RENDERABLE_EFFECTS.includes(fx.type)) return false;
+    const matchesCategory =
+      selectedEffectCategory === 'All' || fx.category === selectedEffectCategory;
+    if (!matchesCategory) return false;
+    if (!searchQuery.trim()) return true;
+    const q = searchQuery.toLowerCase().trim();
+    return (
+      fx.name.toLowerCase().includes(q) ||
+      fx.description.toLowerCase().includes(q) ||
+      fx.category.toLowerCase().includes(q) ||
+      (fx.badge && fx.badge.toLowerCase().includes(q))
+    );
   });
 
   const filteredLuts = LUT_FILTERS_CATALOG.filter((lut) => {
@@ -83,7 +100,9 @@ export const FilterModal: React.FC<FilterModalProps> = ({
           <View style={styles.header}>
             <View>
               <Text style={styles.title}>Effects & Color Grading ✨</Text>
-              <Text style={styles.subtitle}>24+ Readymade video shaders & 18+ cinematic 3D LUTs</Text>
+              <Text style={styles.subtitle}>
+                {VISUAL_EFFECTS_CATALOG.length} CapCut effects · {LUT_FILTERS_CATALOG.length} 3D LUTs · real-time shaders
+              </Text>
             </View>
             <TouchableOpacity onPress={onClose} style={styles.closeBtn}>
               <Text style={styles.closeIcon}>✕</Text>
@@ -121,6 +140,27 @@ export const FilterModal: React.FC<FilterModalProps> = ({
           {/* TAB 1: VISUAL VIDEO EFFECTS */}
           {activeTab === 'effects' && (
             <View style={{ flex: 1 }}>
+              {/* CapCut Search Input Bar */}
+              <View style={styles.searchBar}>
+                <Text style={styles.searchIcon}>🔍</Text>
+                <TextInput
+                  style={styles.searchInput}
+                  placeholder="Search 60+ effects (e.g. shake, flash, glitch, vhs)..."
+                  placeholderTextColor="rgba(255, 255, 255, 0.4)"
+                  value={searchQuery}
+                  onChangeText={setSearchQuery}
+                  clearButtonMode="while-editing"
+                />
+                {searchQuery.length > 0 && (
+                  <TouchableOpacity
+                    onPress={() => setSearchQuery('')}
+                    hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                  >
+                    <Text style={styles.clearSearchIcon}>✕</Text>
+                  </TouchableOpacity>
+                )}
+              </View>
+
               {/* Category Filter Pills */}
               <ScrollView
                 horizontal
@@ -170,7 +210,7 @@ export const FilterModal: React.FC<FilterModalProps> = ({
               )}
 
               {/* Grid of Readymade Effects */}
-              <ScrollView style={styles.contentScroll} showsVerticalScrollIndicator={false}>
+              <ScrollView keyboardShouldPersistTaps="handled" style={styles.contentScroll} showsVerticalScrollIndicator={false}>
                 <View style={styles.gridWrap}>
                   {filteredEffects.map((fx) => {
                     const isSelected = visualEffect === fx.type;
@@ -251,7 +291,7 @@ export const FilterModal: React.FC<FilterModalProps> = ({
               </View>
 
               {/* Grid of Readymade LUT Filters */}
-              <ScrollView style={styles.contentScroll} showsVerticalScrollIndicator={false}>
+              <ScrollView keyboardShouldPersistTaps="handled" style={styles.contentScroll} showsVerticalScrollIndicator={false}>
                 <View style={styles.gridWrap}>
                   {filteredLuts.map((lut) => {
                     const isSelected = lutFilterId === lut.id;
@@ -293,7 +333,7 @@ export const FilterModal: React.FC<FilterModalProps> = ({
 
           {/* TAB 3: MANUAL ADJUSTMENTS */}
           {activeTab === 'manual' && (
-            <ScrollView style={styles.contentScroll} showsVerticalScrollIndicator={false}>
+            <ScrollView keyboardShouldPersistTaps="handled" style={styles.contentScroll} showsVerticalScrollIndicator={false}>
               <Text style={styles.sectionTitle}>Precision Color Parameters</Text>
 
               {[
@@ -311,7 +351,7 @@ export const FilterModal: React.FC<FilterModalProps> = ({
                       style={styles.stepBtn}
                       onPress={() =>
                         onUpdateAdjustments({
-                          [param.key]: Number((param.val - param.step).toFixed(2)),
+                          [param.key]: Math.max(param.key === 'brightness' || param.key === 'temperature' ? -1 : 0, Number((param.val - param.step).toFixed(2))),
                         })
                       }
                     >
@@ -321,7 +361,7 @@ export const FilterModal: React.FC<FilterModalProps> = ({
                       style={styles.stepBtn}
                       onPress={() =>
                         onUpdateAdjustments({
-                          [param.key]: Number((param.val + param.step).toFixed(2)),
+                          [param.key]: Math.min(param.key === 'brightness' || param.key === 'temperature' ? 1 : 2, Number((param.val + param.step).toFixed(2))),
                         })
                       }
                     >
@@ -368,12 +408,17 @@ const styles = StyleSheet.create({
     borderTopLeftRadius: borderRadius.xl,
     borderTopRightRadius: borderRadius.xl,
     padding: spacing.md,
-    height: '82%',
+    height: '90%',
+    width: '100%',
+    maxWidth: 640,
+    alignSelf: 'center',
     borderWidth: 1,
     borderColor: '#2A2A32',
   },
   header: {
     flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 6,
     justifyContent: 'space-between',
     alignItems: 'flex-start',
     marginBottom: spacing.sm,
@@ -391,8 +436,8 @@ const styles = StyleSheet.create({
   },
   closeBtn: {
     backgroundColor: '#26262E',
-    width: 28,
-    height: 28,
+    width: 48,
+    height: 48,
     borderRadius: 14,
     alignItems: 'center',
     justifyContent: 'center',
@@ -429,7 +474,7 @@ const styles = StyleSheet.create({
     fontWeight: '700',
   },
   pillRow: {
-    maxHeight: 38,
+    maxHeight: 52,
     marginBottom: spacing.xs,
   },
   pillContainer: {
@@ -439,7 +484,7 @@ const styles = StyleSheet.create({
   },
   pill: {
     paddingHorizontal: 12,
-    paddingVertical: 6,
+    paddingVertical: 10,
     borderRadius: 16,
     backgroundColor: '#22222A',
     borderWidth: 1,
@@ -460,11 +505,13 @@ const styles = StyleSheet.create({
   },
   intensityBar: {
     flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 6,
     justifyContent: 'space-between',
     alignItems: 'center',
     backgroundColor: '#202028',
     paddingHorizontal: spacing.sm,
-    paddingVertical: 6,
+    paddingVertical: 10,
     borderRadius: borderRadius.sm,
     marginVertical: 4,
   },
@@ -479,7 +526,7 @@ const styles = StyleSheet.create({
   },
   intensityPill: {
     paddingHorizontal: 8,
-    paddingVertical: 3,
+    paddingVertical: 12,
     borderRadius: 4,
     backgroundColor: '#2C2C38',
   },
@@ -584,6 +631,8 @@ const styles = StyleSheet.create({
     padding: spacing.sm,
     marginBottom: spacing.xs,
     flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 6,
     justifyContent: 'space-between',
     alignItems: 'center',
   },
@@ -602,8 +651,8 @@ const styles = StyleSheet.create({
   },
   stepBtn: {
     backgroundColor: '#2C2C38',
-    width: 34,
-    height: 34,
+    width: 48,
+    height: 48,
     borderRadius: 8,
     alignItems: 'center',
     justifyContent: 'center',
@@ -637,5 +686,34 @@ const styles = StyleSheet.create({
     color: '#000000',
     fontSize: 14,
     fontWeight: '800',
+  },
+  searchBar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(255, 255, 255, 0.07)',
+    borderRadius: 8,
+    marginHorizontal: spacing.sm,
+    marginBottom: spacing.xs,
+    paddingHorizontal: 10,
+    height: 38,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.1)',
+  },
+  searchIcon: {
+    fontSize: 14,
+    marginRight: 6,
+  },
+  searchInput: {
+    flex: 1,
+    color: '#FFFFFF',
+    fontSize: 13,
+    height: '100%',
+    padding: 0,
+  },
+  clearSearchIcon: {
+    color: 'rgba(255, 255, 255, 0.6)',
+    fontSize: 14,
+    fontWeight: 'bold',
+    paddingHorizontal: 4,
   },
 });

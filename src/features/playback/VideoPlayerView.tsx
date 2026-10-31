@@ -1,15 +1,30 @@
-import React, { useEffect, useRef } from 'react';
-import { View, StyleSheet, Text, TouchableOpacity, Image, Animated, Easing } from 'react-native';
+import React, { useEffect, useRef, useState } from 'react';
+import { View, StyleSheet, Text, TouchableOpacity, Image, Animated, Easing, Platform } from 'react-native';
 import { useVideoPlayer, VideoView } from 'expo-video';
 import { colors, borderRadius, spacing } from '../../theme';
 import { Transform } from '../../core/models/clip';
+import { VISUAL_EFFECTS_CATALOG } from '../../core/effects/effectRegistry';
+
+// expo-video players are mutable native objects; keep mutations outside React state.
+function configurePlayback(player: ReturnType<typeof useVideoPlayer>, volume: number, speed: number) {
+  player.muted = volume === 0;
+  player.volume = Math.max(0, Math.min(1, volume));
+  player.playbackRate = speed;
+}
+function seekPlayer(player: ReturnType<typeof useVideoPlayer>, seconds: number) {
+  player.currentTime = seconds;
+}
 
 export interface VideoPlayerViewProps {
   videoUri?: string;
+  mediaType?: 'video' | 'image';
   cutoutOverlayUri?: string;
   isPlaying: boolean;
   seekTimeMs: number;
   tintColor?: string;
+  volume?: number;
+  speed?: number;
+  visualEffectIntensity?: number;
   visualEffect?: string;
   transform?: Transform;
   activeSubtitle?: string;
@@ -18,26 +33,32 @@ export interface VideoPlayerViewProps {
   onAddSamplePress?: () => void;
 }
 
+const VIDEO_EXTENSIONS = ['.mp4', '.mov', '.m4v', '.webm', '.mkv', '.avi', '.3gp', '.ts', '.m3u8'];
+const IMAGE_EXTENSIONS = ['.jpg', '.jpeg', '.png', '.webp', '.gif', '.heic', '.heif', '.bmp', '.svg'];
+
 export const isImageUri = (uri?: string): boolean => {
   if (!uri) return false;
   const clean = uri.toLowerCase().split('?')[0];
-  return (
-    clean.endsWith('.jpg') ||
-    clean.endsWith('.jpeg') ||
-    clean.endsWith('.png') ||
-    clean.endsWith('.webp') ||
-    clean.endsWith('.gif') ||
-    clean.includes('image') ||
-    clean.includes('unsplash')
-  );
+  // Strict extension detection: never false-positive on cache directory paths (e.g. /ImagePicker/)
+  if (VIDEO_EXTENSIONS.some((ext) => clean.endsWith(ext))) {
+    return false;
+  }
+  if (IMAGE_EXTENSIONS.some((ext) => clean.endsWith(ext))) {
+    return true;
+  }
+  return clean.startsWith('data:image/') || clean.includes('images.unsplash.com');
 };
 
 export const VideoPlayerView: React.FC<VideoPlayerViewProps> = ({
   videoUri,
+  mediaType,
   cutoutOverlayUri,
   isPlaying,
   seekTimeMs,
   tintColor,
+  volume = 1,
+  speed = 1,
+  visualEffectIntensity = 0.7,
   visualEffect = 'none',
   transform,
   activeSubtitle,
@@ -45,14 +66,16 @@ export const VideoPlayerView: React.FC<VideoPlayerViewProps> = ({
   onImportPress,
   onAddSamplePress,
 }) => {
-  const player = useVideoPlayer(videoUri || null, (p) => {
+  const isImage = mediaType ? mediaType === 'image' : isImageUri(videoUri);
+  const player = useVideoPlayer(isImage ? null : videoUri || null, (p) => {
     p.loop = false;
     p.muted = false;
     p.volume = 1.0;
+    p.timeUpdateEventInterval = 0.1;
   });
 
   const lastSeekRef = useRef<number>(-1);
-  const vfxAnim = useRef(new Animated.Value(0)).current;
+  const [vfxAnim] = useState(() => new Animated.Value(0));
 
   // Animate dynamic VFX loops when playing
   useEffect(() => {
@@ -83,14 +106,9 @@ export const VideoPlayerView: React.FC<VideoPlayerViewProps> = ({
     };
   }, [isPlaying, visualEffect, vfxAnim]);
 
-  // Ensure volume and unmuted status
   useEffect(() => {
-    if (!player) return;
-    try {
-      player.muted = false;
-      player.volume = 1.0;
-    } catch {}
-  }, [player, videoUri]);
+    configurePlayback(player, volume, speed);
+  }, [player, volume, speed]);
 
   // Synchronize play / pause with player
   useEffect(() => {
@@ -108,7 +126,7 @@ export const VideoPlayerView: React.FC<VideoPlayerViewProps> = ({
     const targetSec = seekTimeMs / 1000;
     if (Math.abs(targetSec - player.currentTime) > 0.08) {
       lastSeekRef.current = seekTimeMs;
-      player.currentTime = targetSec;
+      seekPlayer(player, targetSec);
     }
   }, [seekTimeMs, player, isPlaying]);
 
@@ -129,7 +147,7 @@ export const VideoPlayerView: React.FC<VideoPlayerViewProps> = ({
         <Text style={styles.placeholderIcon}>🎬</Text>
         <Text style={styles.placeholderTitle}>No Media Loaded</Text>
         <Text style={styles.placeholderSubtitle}>
-          Import videos from your iPhone gallery or load a sample scene to explore editing tools.
+          Choose a video or try a sample scene.
         </Text>
         <View style={styles.placeholderBtnRow}>
           {onImportPress && (
@@ -160,23 +178,24 @@ export const VideoPlayerView: React.FC<VideoPlayerViewProps> = ({
   const effectiveOpacity = transform?.opacity ?? 1.0;
   const effectiveTranslateX = transform?.translateX ?? 0;
   const effectiveTranslateY = transform?.translateY ?? 0;
-  const isImage = isImageUri(videoUri);
+  const isShakeEffect =
+    visualEffect === 'camera_shake' ||
+    visualEffect === 'earthquake' ||
+    visualEffect === 'beat_bounce' ||
+    visualEffect === 'twitch_jolt';
+  const shakeTranslateX = isShakeEffect
+    ? vfxAnim.interpolate({
+        inputRange: [0, 0.2, 0.4, 0.6, 0.8, 1],
+        outputRange: [0, -6, 5, -4, 4, 0],
+      })
+    : 0;
 
-  const shakeTranslateX =
-    visualEffect === 'camera_shake'
-      ? vfxAnim.interpolate({
-          inputRange: [0, 0.2, 0.4, 0.6, 0.8, 1],
-          outputRange: [0, -6, 5, -4, 4, 0],
-        })
-      : 0;
-
-  const shakeTranslateY =
-    visualEffect === 'camera_shake'
-      ? vfxAnim.interpolate({
-          inputRange: [0, 0.25, 0.5, 0.75, 1],
-          outputRange: [0, 5, -4, 3, 0],
-        })
-      : 0;
+  const shakeTranslateY = isShakeEffect
+    ? vfxAnim.interpolate({
+        inputRange: [0, 0.25, 0.5, 0.75, 1],
+        outputRange: [0, 5, -4, 3, 0],
+      })
+    : 0;
 
   const vhsScanlineY = vfxAnim.interpolate({
     inputRange: [0, 1],
@@ -219,6 +238,7 @@ export const VideoPlayerView: React.FC<VideoPlayerViewProps> = ({
         ) : (
           <VideoView
             player={player}
+            surfaceType={Platform.OS === 'android' ? 'textureView' : undefined}
             style={styles.videoView}
             contentFit="contain"
             nativeControls={false}
@@ -240,19 +260,39 @@ export const VideoPlayerView: React.FC<VideoPlayerViewProps> = ({
           <View style={[styles.effectOverlay, { backgroundColor: tintColor }]} pointerEvents="none" />
         )}
 
-        {/* 2. Visual Shader Effects Overlays */}
+        <View pointerEvents="none" style={[StyleSheet.absoluteFill, { opacity: visualEffectIntensity }]} >
+        {/* Real-time interactive preview for all 63 CapCut-style effects */}
+        {visualEffect && visualEffect !== 'none' && (
+          <Text style={styles.effectIndicatorBadge}>
+            {VISUAL_EFFECTS_CATALOG.find((e) => e.type === visualEffect)?.icon ?? '✨'}{' '}
+            {(VISUAL_EFFECTS_CATALOG.find((e) => e.type === visualEffect)?.name ?? visualEffect).toUpperCase()}
+          </Text>
+        )}
+
+        {visualEffect === 'black_flash' && (
+          <Animated.View style={[StyleSheet.absoluteFill, { backgroundColor: '#000000', opacity: strobeOpacity }]} pointerEvents="none" />
+        )}
+
+        {visualEffect === 'cinema_widescreen' && (
+          <View style={StyleSheet.absoluteFill} pointerEvents="none">
+            <View style={{ position: 'absolute', top: 0, left: 0, right: 0, height: '12%', backgroundColor: '#000000' }} />
+            <View style={{ position: 'absolute', bottom: 0, left: 0, right: 0, height: '12%', backgroundColor: '#000000' }} />
+          </View>
+        )}
+
+        {visualEffect?.startsWith('split_') && (
+          <View style={[StyleSheet.absoluteFill, { borderWidth: 1, borderColor: 'rgba(255,255,255,0.4)', borderStyle: 'dashed' }]} pointerEvents="none" />
+        )}
+
         {visualEffect === 'glitch' && (
           <View style={styles.glitchOverlay} pointerEvents="none">
             <View style={styles.glitchLine1} />
             <View style={styles.glitchLine2} />
-            <Text style={styles.effectIndicatorBadge}>⚡ GLITCH FX</Text>
           </View>
         )}
 
         {visualEffect === 'film_grain' && (
-          <View style={styles.grainOverlay} pointerEvents="none">
-            <Text style={styles.effectIndicatorBadge}>🎞️ 35mm GRAIN</Text>
-          </View>
+          <View style={styles.grainOverlay} pointerEvents="none" />
         )}
 
         {visualEffect === 'retro_vhs' && (
@@ -270,9 +310,7 @@ export const VideoPlayerView: React.FC<VideoPlayerViewProps> = ({
         )}
 
         {visualEffect === 'zoom_blur' && (
-          <View style={styles.zoomBlurOverlay} pointerEvents="none">
-            <Text style={styles.effectIndicatorBadge}>💫 ZOOM BLUR</Text>
-          </View>
+          <View style={styles.zoomBlurOverlay} pointerEvents="none" />
         )}
 
         {visualEffect === 'sparkle_glow' && (
@@ -282,37 +320,28 @@ export const VideoPlayerView: React.FC<VideoPlayerViewProps> = ({
           </View>
         )}
 
-        {visualEffect === 'camera_shake' && (
-          <View style={styles.shakeOverlay} pointerEvents="none">
-            <Text style={styles.effectIndicatorBadge}>💥 IMPACT SHAKE</Text>
-          </View>
-        )}
-
         {visualEffect === 'chromatic_flash' && (
           <Animated.View style={[styles.chromaFlashOverlay, { opacity: strobeOpacity }]} pointerEvents="none">
             <View style={styles.glitchLine1} />
-            <Text style={styles.effectIndicatorBadge}>⚡ CHROMATIC FLASH</Text>
           </Animated.View>
         )}
 
         {visualEffect === 'strobe_flash' && (
-          <Animated.View style={[styles.strobeOverlay, { opacity: strobeOpacity }]} pointerEvents="none">
-            <Text style={styles.effectIndicatorBadge}>💡 WHITE STROBE</Text>
-          </Animated.View>
+          <Animated.View style={[styles.strobeOverlay, { opacity: strobeOpacity }]} pointerEvents="none" />
         )}
 
         {visualEffect === 'film_burn' && (
-          <Animated.View style={[styles.filmBurnOverlay, { opacity: burnOpacity }]} pointerEvents="none">
-            <Text style={styles.effectIndicatorBadge}>🔥 FILM BURN</Text>
-          </Animated.View>
+          <Animated.View style={[styles.filmBurnOverlay, { opacity: burnOpacity }]} pointerEvents="none" />
         )}
 
         {visualEffect === 'neon_edge' && (
-          <View style={styles.neonEdgeOverlay} pointerEvents="none">
-            <Text style={styles.effectIndicatorBadge}>🌈 NEON EDGE</Text>
-          </View>
+          <View style={styles.neonEdgeOverlay} pointerEvents="none" />
         )}
 
+        {['halo_blur', 'soft_mist', 'dreamy_aura', 'light_leak', 'cyber_scanlines', 'crt_noise'].includes(visualEffect) && (
+          <View style={[StyleSheet.absoluteFill, { backgroundColor: visualEffect === 'light_leak' ? 'rgba(255,165,50,0.2)' : 'rgba(220,235,255,0.12)' }]} />
+        )}
+        </View>
         {/* 3. Live Subtitles / Text Overlay */}
         {activeSubtitle && (
           <View style={styles.subtitleContainer} pointerEvents="none">
@@ -542,7 +571,7 @@ const styles = StyleSheet.create({
     padding: spacing.md,
   },
   placeholderIcon: {
-    fontSize: 36,
+    fontSize: 24,
     marginBottom: spacing.xs,
   },
   placeholderTitle: {
@@ -559,12 +588,16 @@ const styles = StyleSheet.create({
     maxWidth: 240,
   },
   placeholderBtnRow: {
+    flexWrap: 'wrap',
+    justifyContent: 'center',
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.xs,
     marginTop: spacing.xs,
   },
   importBtn: {
+    minHeight: 48,
+    justifyContent: 'center',
     backgroundColor: colors.primary,
     paddingVertical: spacing.xs + 2,
     paddingHorizontal: spacing.sm + 2,
@@ -576,6 +609,8 @@ const styles = StyleSheet.create({
     fontWeight: '700',
   },
   sampleBtn: {
+    minHeight: 48,
+    justifyContent: 'center',
     backgroundColor: colors.surfaceLight,
     borderWidth: 1,
     borderColor: colors.border,

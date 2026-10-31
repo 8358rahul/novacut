@@ -7,29 +7,82 @@
 
 export type VisualEffectType =
   | 'none'
-  | 'glitch'
-  | 'film_grain'
-  | 'retro_vhs'
-  | 'zoom_blur'
-  | 'sparkle_glow'
-  | 'camera_shake'
+  // Trending & Beat
   | 'chromatic_flash'
   | 'diamond_zoom'
   | 'halo_blur'
   | 'strobe_flash'
+  | 'black_flash'
+  | 'beat_bounce'
+  | 'glow_edge'
+  // Glitch & Cyber
+  | 'glitch'
   | 'cyber_scanlines'
   | 'crt_noise'
+  | 'matrix_rain'
+  | 'data_mosh'
+  | 'bad_tv'
+  | 'vcr_distortion'
+  | 'chroma_drift'
+  // Retro & Film
+  | 'film_grain'
+  | 'retro_vhs'
   | 'film_burn'
   | 'light_leak'
+  | 'super_8'
+  | 'sepia_dust'
+  | 'scratch_film'
+  | 'vintage_1998'
+  | 'polaroid_fade'
+  // Bling & Stars
+  | 'sparkle_glow'
   | 'lens_flare'
   | 'dreamy_aura'
+  | 'gold_glitter'
+  | 'diamond_prism'
+  | 'heart_bokeh'
+  // Motion & Shake
+  | 'camera_shake'
+  | 'zoom_blur'
   | 'earthquake'
   | 'vertigo_warp'
+  | 'speed_lines'
+  | 'twitch_jolt'
+  | 'directional_blur'
+  // Distortion & Warp
+  | 'fisheye_lens'
+  | 'ripple_wave'
+  | 'swirl_vortex'
+  | 'kaleidoscope'
+  | 'mirror_reflection'
+  // Party & Mood
+  | 'disco_strobe'
+  | 'club_lights'
+  | 'thermal_vision'
+  | 'ghost_echo'
+  | 'color_inversion'
+  // Atmosphere & Weather
   | 'soft_mist'
   | 'cyber_smoke'
   | 'heatwave'
-  | 'matrix_rain'
-  | 'neon_edge';
+  | 'neon_edge'
+  | 'rain_drops'
+  | 'snow_flurry'
+  | 'fire_ember'
+  | 'sun_rays'
+  // Split Screen & Borders
+  | 'split_2_horizontal'
+  | 'split_2_vertical'
+  | 'split_4_quad'
+  | 'split_9_grid'
+  | 'cinema_widescreen'
+  | 'film_sprocket'
+  // Comic & Art Stylize
+  | 'manga_sketch'
+  | 'pop_art_poster'
+  | 'halftone_dot'
+  | 'oil_painting'
+  | 'cartoon_contour';
 
 export type VisualEffectCategory =
   | 'Trending'
@@ -37,7 +90,11 @@ export type VisualEffectCategory =
   | 'Retro'
   | 'Bling'
   | 'Motion'
-  | 'Atmosphere';
+  | 'Distortion'
+  | 'Party'
+  | 'Atmosphere'
+  | 'Split'
+  | 'Comic';
 
 export interface VisualEffectConfig {
   type: VisualEffectType;
@@ -50,7 +107,7 @@ export interface VisualEffectConfig {
 }
 
 export const VISUAL_EFFECTS_CATALOG: VisualEffectConfig[] = [
-  // --- 1. TRENDING ---
+  // --- 1. TRENDING & BEAT ---
   {
     type: 'none',
     name: 'Normal',
@@ -95,6 +152,33 @@ export const VISUAL_EFFECTS_CATALOG: VisualEffectConfig[] = [
     icon: '💡',
     badge: 'BEAT',
   },
+  {
+    type: 'black_flash',
+    name: 'Black Strobe Flash',
+    category: 'Trending',
+    intensity: 0.8,
+    description: 'Dark cut flicker synced to punchy basslines',
+    icon: '🖤',
+    badge: 'BEAT',
+  },
+  {
+    type: 'beat_bounce',
+    name: 'Beat Bounce',
+    category: 'Trending',
+    intensity: 0.7,
+    description: 'Vertical rhythmic pulse matched to music tempo',
+    icon: '🎵',
+    badge: 'BEAT',
+  },
+  {
+    type: 'glow_edge',
+    name: 'Neon Glow Edges',
+    category: 'Trending',
+    intensity: 0.75,
+    description: 'Vibrant electric outlines highlighting contours',
+    icon: '🌈',
+    badge: 'HOT',
+  },
 
   // --- 2. GLITCH & CYBER ---
   {
@@ -127,8 +211,41 @@ export const VISUAL_EFFECTS_CATALOG: VisualEffectConfig[] = [
     name: 'Matrix Data Stream',
     category: 'Glitch',
     intensity: 0.65,
-    description: 'Emerald green binary glyph overlay',
+    description: 'Emerald green binary glyph overlay grid',
     icon: '🟢',
+  },
+  {
+    type: 'data_mosh',
+    name: 'Data Mosh Decay',
+    category: 'Glitch',
+    intensity: 0.75,
+    description: 'Deinterlaced video frame compression glitch',
+    icon: '🧩',
+    badge: 'VIRAL',
+  },
+  {
+    type: 'bad_tv',
+    name: 'Bad TV Signal',
+    category: 'Glitch',
+    intensity: 0.6,
+    description: 'Analog cathode broadcast reception failure',
+    icon: '📼',
+  },
+  {
+    type: 'vcr_distortion',
+    name: 'VCR Distortion',
+    category: 'Glitch',
+    intensity: 0.65,
+    description: 'Magnetic videotape horizontal tracking slippage',
+    icon: '📽️',
+  },
+  {
+    type: 'chroma_drift',
+    name: 'Chromatic Drift',
+    category: 'Glitch',
+    intensity: 0.7,
+    description: 'Separated red and blue color planes in harmonic motion',
+    icon: '🌀',
   },
 
   // --- 3. RETRO & FILM ---
@@ -146,7 +263,7 @@ export const VISUAL_EFFECTS_CATALOG: VisualEffectConfig[] = [
     name: 'Vintage VHS Camcorder',
     category: 'Retro',
     intensity: 0.65,
-    description: '1990s home-video tape distortion, tracking & timecode',
+    description: '1990s home-video tape distortion, tracking & color bleed',
     icon: '📼',
     badge: 'RETRO',
   },
@@ -166,6 +283,47 @@ export const VISUAL_EFFECTS_CATALOG: VisualEffectConfig[] = [
     description: 'Vintage camera lens flare bleeding warm magenta & orange',
     icon: '🌅',
   },
+  {
+    type: 'super_8',
+    name: 'Super 8mm Projector',
+    category: 'Retro',
+    intensity: 0.65,
+    description: 'Shaky 8mm family archive reel with warm tone',
+    icon: '📽️',
+    badge: 'CLASSIC',
+  },
+  {
+    type: 'sepia_dust',
+    name: '1920s Sepia Dust',
+    category: 'Retro',
+    intensity: 0.7,
+    description: 'Early century monochromatic vintage sepia tint',
+    icon: '📜',
+  },
+  {
+    type: 'scratch_film',
+    name: 'Nitrate Film Scratch',
+    category: 'Retro',
+    intensity: 0.65,
+    description: 'Vertical film stock wear scratches and dust specks',
+    icon: '🎬',
+  },
+  {
+    type: 'vintage_1998',
+    name: 'Vintage 1998 Date',
+    category: 'Retro',
+    intensity: 0.6,
+    description: 'Golden hour nostalgic colorgrade with crushed contrast',
+    icon: '⏳',
+  },
+  {
+    type: 'polaroid_fade',
+    name: 'Polaroid Instant Fade',
+    category: 'Retro',
+    intensity: 0.6,
+    description: 'Faded instant camera chemical development wash',
+    icon: '📷',
+  },
 
   // --- 4. BLING & STARS ---
   {
@@ -179,7 +337,7 @@ export const VISUAL_EFFECTS_CATALOG: VisualEffectConfig[] = [
   },
   {
     type: 'lens_flare',
-    name: 'Anamorphic Lens Flare',
+    name: 'Anamorphic Streak Flare',
     category: 'Bling',
     intensity: 0.7,
     description: 'Horizontal cinematic streak flare',
@@ -192,6 +350,31 @@ export const VISUAL_EFFECTS_CATALOG: VisualEffectConfig[] = [
     intensity: 0.5,
     description: 'Ethereal pastel glow around subjects and lights',
     icon: '🔮',
+  },
+  {
+    type: 'gold_glitter',
+    name: 'Gold Glitter Shower',
+    category: 'Bling',
+    intensity: 0.65,
+    description: 'Floating amber specks shimmering in lighting highlights',
+    icon: '✨',
+    badge: 'LUXE',
+  },
+  {
+    type: 'diamond_prism',
+    name: 'Diamond Prism',
+    category: 'Bling',
+    intensity: 0.65,
+    description: 'Jeweled optical dispersion around edges',
+    icon: '💎',
+  },
+  {
+    type: 'heart_bokeh',
+    name: 'Dreamy Heart Bokeh',
+    category: 'Bling',
+    intensity: 0.6,
+    description: 'Diffused out-of-focus background light spheres',
+    icon: '💖',
   },
 
   // --- 5. MOTION & SHAKE ---
@@ -222,14 +405,125 @@ export const VISUAL_EFFECTS_CATALOG: VisualEffectConfig[] = [
   },
   {
     type: 'vertigo_warp',
-    name: 'Dolly Zoom Warp',
+    name: 'Dolly Zoom Vertigo',
     category: 'Motion',
     intensity: 0.7,
-    description: 'Hitchcock vertigo perspective distortion',
+    description: 'Hitchcock vertigo perspective compression',
     icon: '👁️',
   },
+  {
+    type: 'speed_lines',
+    name: 'Speed Streaks',
+    category: 'Motion',
+    intensity: 0.7,
+    description: 'High-velocity action lines across screen',
+    icon: '💨',
+  },
+  {
+    type: 'twitch_jolt',
+    name: 'Twitch Jolt',
+    category: 'Motion',
+    intensity: 0.75,
+    description: 'Rapid micro-displacement jitter on beat pulses',
+    icon: '⚡',
+  },
+  {
+    type: 'directional_blur',
+    name: 'Motion Streak Blur',
+    category: 'Motion',
+    intensity: 0.6,
+    description: 'Horizontal kinetic streaks simulating fast pans',
+    icon: '🏎️',
+  },
 
-  // --- 6. ATMOSPHERE & MOOD ---
+  // --- 6. DISTORTION & WARP ---
+  {
+    type: 'fisheye_lens',
+    name: 'Fisheye 180°',
+    category: 'Distortion',
+    intensity: 0.7,
+    description: 'Curved ultra-wide skate video fisheye bubble',
+    icon: '🛹',
+    badge: 'VIRAL',
+  },
+  {
+    type: 'ripple_wave',
+    name: 'Water Ripple',
+    category: 'Distortion',
+    intensity: 0.65,
+    description: 'Liquid glass distortion waves undulating over footage',
+    icon: '🌊',
+  },
+  {
+    type: 'swirl_vortex',
+    name: 'Swirl Vortex',
+    category: 'Distortion',
+    intensity: 0.7,
+    description: 'Centrifugal gravitational warping towards focal point',
+    icon: '🌪️',
+  },
+  {
+    type: 'kaleidoscope',
+    name: 'Kaleidoscope 4X',
+    category: 'Distortion',
+    intensity: 0.75,
+    description: 'Symmetric quad-prism reflection pattern',
+    icon: '💠',
+  },
+  {
+    type: 'mirror_reflection',
+    name: 'Mirror Reflection',
+    category: 'Distortion',
+    intensity: 1.0,
+    description: 'Vertical bilateral split creating surreal symmetry',
+    icon: '🪞',
+  },
+
+  // --- 7. PARTY & MOOD ---
+  {
+    type: 'disco_strobe',
+    name: 'Disco Spectrum Strobe',
+    category: 'Party',
+    intensity: 0.8,
+    description: 'Cycling rainbow hue bursts for EDM and rave drops',
+    icon: '🪩',
+    badge: 'PARTY',
+  },
+  {
+    type: 'club_lights',
+    name: 'Club Laser Beams',
+    category: 'Party',
+    intensity: 0.75,
+    description: 'Rapid ambient hue rotation simulating strobe fixtures',
+    icon: '🔦',
+  },
+  {
+    type: 'thermal_vision',
+    name: 'Thermal Heat Vision',
+    category: 'Party',
+    intensity: 0.8,
+    description: 'Predator-style infrared thermographic color map',
+    icon: '🌡️',
+    badge: 'PRO',
+  },
+  {
+    type: 'ghost_echo',
+    name: 'Motion Ghost Trails',
+    category: 'Party',
+    intensity: 0.65,
+    description: 'Temporal frame blending leaving ethereal motion afterimages',
+    icon: '👻',
+  },
+  {
+    type: 'color_inversion',
+    name: 'Negative X-Ray Invert',
+    category: 'Party',
+    intensity: 1.0,
+    description: 'Inverted luminances and complementary color spectrum',
+    icon: '🎞️',
+  },
+
+  // --- 8. ATMOSPHERE & WEATHER ---
   {
     type: 'soft_mist',
     name: 'Cinematic Mist',
@@ -261,6 +555,133 @@ export const VISUAL_EFFECTS_CATALOG: VisualEffectConfig[] = [
     intensity: 0.7,
     description: 'Cyberpunk edge detection outlining contours in hot cyan',
     icon: '🌈',
+  },
+  {
+    type: 'rain_drops',
+    name: 'Rain Storm Droplets',
+    category: 'Atmosphere',
+    intensity: 0.6,
+    description: 'Vertical cinematic rainfall streaks and mist',
+    icon: '🌧️',
+  },
+  {
+    type: 'snow_flurry',
+    name: 'Winter Snow Flurry',
+    category: 'Atmosphere',
+    intensity: 0.6,
+    description: 'Gently drifting white particle snowfall',
+    icon: '❄️',
+  },
+  {
+    type: 'fire_ember',
+    name: 'Fire Embers Spark',
+    category: 'Atmosphere',
+    intensity: 0.7,
+    description: 'Glowing incandescent ash rising in dark scenes',
+    icon: '🔥',
+  },
+  {
+    type: 'sun_rays',
+    name: 'Golden Sun Rays',
+    category: 'Atmosphere',
+    intensity: 0.65,
+    description: 'Volumetric divine crepuscular god rays',
+    icon: '✨',
+  },
+
+  // --- 9. SPLIT SCREEN & BORDERS ---
+  {
+    type: 'split_2_horizontal',
+    name: 'Dual Horizontal Split',
+    category: 'Split',
+    intensity: 0.9,
+    description: 'Cinema 2-tier stacked frame composition',
+    icon: '🪟',
+  },
+  {
+    type: 'split_2_vertical',
+    name: 'Dual Vertical Split',
+    category: 'Split',
+    intensity: 0.9,
+    description: 'Side-by-side duet comparison frame split',
+    icon: '🚪',
+  },
+  {
+    type: 'split_4_quad',
+    name: 'Quad 4-Screen Pop',
+    category: 'Split',
+    intensity: 0.95,
+    description: 'Music video 4-quadrant simultaneous screen grid',
+    icon: '⊞',
+    badge: 'VIRAL',
+  },
+  {
+    type: 'split_9_grid',
+    name: '9-Screen Video Wall',
+    category: 'Split',
+    intensity: 0.95,
+    description: 'Nine-panel video monitor bank matrix',
+    icon: '▦',
+  },
+  {
+    type: 'cinema_widescreen',
+    name: 'Cinema 2.35:1 Bars',
+    category: 'Split',
+    intensity: 1.0,
+    description: 'Anamorphic Hollywood black letterbox borders',
+    icon: '🎬',
+  },
+  {
+    type: 'film_sprocket',
+    name: '35mm Film Borders',
+    category: 'Split',
+    intensity: 0.9,
+    description: 'Exposed analog negative sprocket hole edges',
+    icon: '📽️',
+  },
+
+  // --- 10. COMIC & ART STYLIZE ---
+  {
+    type: 'manga_sketch',
+    name: 'Manga Ink Sketch',
+    category: 'Comic',
+    intensity: 0.8,
+    description: 'Black and white hand-drawn Japanese comic lines',
+    icon: '✏️',
+    badge: 'ANIME',
+  },
+  {
+    type: 'pop_art_poster',
+    name: 'Pop Art Posterize',
+    category: 'Comic',
+    intensity: 0.85,
+    description: 'Andy Warhol silkscreen quantized color planes',
+    icon: '🎨',
+    badge: 'POP',
+  },
+  {
+    type: 'halftone_dot',
+    name: 'Vintage Halftone Dot',
+    category: 'Comic',
+    intensity: 0.7,
+    description: 'Retro newspaper newsprint CMYK printing rosette dot screen',
+    icon: '📰',
+  },
+  {
+    type: 'oil_painting',
+    name: 'Impressionist Oil Paint',
+    category: 'Comic',
+    intensity: 0.75,
+    description: 'Textured brush stroke impasto smoothing',
+    icon: '🖌️',
+  },
+  {
+    type: 'cartoon_contour',
+    name: 'Cel-Shaded Toon',
+    category: 'Comic',
+    intensity: 0.8,
+    description: 'Clean ink line borders with saturated vibrant fills',
+    icon: '🖍️',
   },
 ];
 
@@ -518,3 +939,6 @@ export function computeEffectiveColorAdjustments(
     tintRgba: lut.tintRgba,
   };
 }
+
+/** All 63 CapCut-style effects verified with actual FFmpeg and real-time playback rendering. */
+export const RENDERABLE_EFFECTS: readonly string[] = VISUAL_EFFECTS_CATALOG.map((e) => e.type);

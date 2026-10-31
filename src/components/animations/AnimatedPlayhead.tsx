@@ -13,7 +13,6 @@ import Animated, {
   withSequence,
   withTiming,
 } from 'react-native-reanimated';
-import { colors } from '../../theme';
 
 export interface AnimatedPlayheadProps {
   positionX: number;
@@ -42,7 +41,7 @@ export const AnimatedPlayhead: React.FC<AnimatedPlayheadProps> = ({
   }, [isPlaying]);
 
   const animatedHeadStyle = useAnimatedStyle(() => ({
-    transform: [{ rotate: '45deg' }, { scale: diamondGlow.value }],
+    transform: [{ scale: diamondGlow.value }],
   }));
 
   return (
@@ -53,7 +52,9 @@ export const AnimatedPlayhead: React.FC<AnimatedPlayheadProps> = ({
       ]}
       pointerEvents="none"
     >
-      <Animated.View style={[styles.playheadHead, animatedHeadStyle]} />
+      <Animated.View style={[styles.playheadHead, animatedHeadStyle]}>
+        <View style={styles.playheadHeadInner} />
+      </Animated.View>
       <View style={styles.playheadLine} />
     </View>
   );
@@ -65,32 +66,43 @@ const styles = StyleSheet.create({
     top: 0,
     bottom: 0,
     height: '100%',
-    width: 24,
-    marginLeft: -12,
+    width: 20,
+    marginLeft: -10,
     zIndex: 100,
     alignItems: 'center',
     pointerEvents: 'none',
   },
   playheadHead: {
     width: 14,
-    height: 14,
-    backgroundColor: colors.accentGold,
-    borderWidth: 1.5,
-    borderColor: '#FFFFFF',
-    borderRadius: 2,
-    marginTop: 4,
+    height: 18,
+    backgroundColor: '#FFFFFF',
+    borderTopLeftRadius: 4,
+    borderTopRightRadius: 4,
+    borderBottomLeftRadius: 2,
+    borderBottomRightRadius: 2,
+    marginTop: 2,
+    alignItems: 'center',
+    justifyContent: 'center',
     shadowColor: '#000000',
     shadowOpacity: 0.8,
     shadowRadius: 3,
-    elevation: 6,
+    shadowOffset: { width: 0, height: 1 },
+    elevation: 8,
+  },
+  playheadHeadInner: {
+    width: 2,
+    height: 8,
+    backgroundColor: '#1E1E24',
+    borderRadius: 1,
   },
   playheadLine: {
     width: 2,
     flex: 1,
-    backgroundColor: colors.accentGold,
+    backgroundColor: '#FFFFFF',
     shadowColor: '#000000',
-    shadowOpacity: 0.8,
+    shadowOpacity: 0.9,
     shadowRadius: 2,
-    elevation: 4,
+    shadowOffset: { width: 0, height: 0 },
+    elevation: 6,
   },
 });

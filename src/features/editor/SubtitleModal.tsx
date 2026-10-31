@@ -1,9 +1,9 @@
+import { AppModal as Modal } from '../../components/AppModal';
 import React, { useState } from 'react';
 import {
   View,
   Text,
   StyleSheet,
-  Modal,
   TouchableOpacity,
   TextInput,
   ScrollView,
@@ -73,7 +73,7 @@ export const SubtitleModal: React.FC<SubtitleModalProps> = ({
             </TouchableOpacity>
           </View>
 
-          <ScrollView style={styles.body} showsVerticalScrollIndicator={false}>
+          <ScrollView keyboardShouldPersistTaps="handled" style={styles.body} showsVerticalScrollIndicator={false}>
             {/* Quick Caption at Playhead */}
             <View style={styles.section}>
               <Text style={styles.sectionTitle}>Add Caption at Playhead ({formatTimecode(playheadUs)})</Text>

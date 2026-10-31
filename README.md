@@ -1,6 +1,23 @@
 # NovaCut — Pro Mobile Video & Photo Editor
 
-NovaCut is an original, full-featured video and photo editor built with Expo, React Native, and TypeScript. Reverse-engineered from CapCut's architectural principles via the REA (`morluto/rea`) reverse-engineering framework, NovaCut provides a clean-room, highly optimized, non-destructive multi-track timeline engine, sub-second microsecond integer timebase (`1s = 1,000,000 µs`), CutSame viral video templates, audio beat tracking, 3D LUT color grading, real-time video shader effects, photo canvas retouching, universal multi-category search, and a deterministic media export pipeline.
+NovaCut is an Expo/React Native video and photo editor prototype with an original TypeScript timeline engine and a Python rendering service. It is not a complete CapCut replacement. Several existing UI tools remain experimental; their presence does not mean preview and export support are complete.
+
+The current verified work is documented in [the CapCut investigation and implementation report](docs/research/README.md). This includes REA package inspection, observed bundled split-screen data, and an actual upload/render/download pipeline. Earlier claims below about “authentic”, “lossless”, or complete feature parity have not been validated against a running CapCut app.
+
+### Run locally
+
+```sh
+npm ci
+python3 -m venv .venv
+.venv/bin/pip install -r engine/requirements.txt
+.venv/bin/uvicorn novacut_studio:app --app-dir engine --host 0.0.0.0 --port 8765
+# In a second terminal, set EXPO_PUBLIC_ENGINE_URL to your computer's LAN URL:
+npm start
+```
+
+Use this backend only on a trusted development network: authentication, quotas, durable jobs and production storage are not implemented. Set `NOVACUT_DATA_DIR` to change the default `engine/data` storage directory. The phone must upload its local media before the server can render it.
+
+Server export currently supports video/image placement, gaps, constant speed, source trimming, audio mixing, mute, resolution, 14 original effects, and all 18 existing color presets with adjustable strength. Unsupported advanced edits produce an explicit error. Export never substitutes a fabricated file when the server is unavailable.
 
 ---
 

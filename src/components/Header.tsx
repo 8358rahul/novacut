@@ -59,7 +59,8 @@ const styles = StyleSheet.create({
     zIndex: 100,
   },
   headerBar: {
-    height: 54,
+    minHeight: 56,
+    paddingVertical: 4,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
@@ -72,8 +73,8 @@ const styles = StyleSheet.create({
     marginRight: spacing.sm,
   },
   backButton: {
-    width: 40,
-    height: 40,
+    width: 48,
+    height: 48,
     borderRadius: 20,
     backgroundColor: colors.surfaceLight,
     alignItems: 'center',

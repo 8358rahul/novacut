@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   View,
   Text,
@@ -6,6 +6,7 @@ import {
   TouchableOpacity,
   ScrollView,
   Alert,
+  Platform,
 } from 'react-native';
 import { colors, spacing, borderRadius } from '../../theme';
 import { Header } from '../../components/Header';
@@ -23,6 +24,8 @@ import {
 import { defaultProjectStorage } from '../../core/persistence/storage';
 import { formatTimecode } from '../../core/models/timeline';
 import { buildExportCompositionPlan } from '../../core/rendering/exporter';
+import { defaultAIEngineService } from '../../services/aiEngineService';
+import { prepareExportClips } from '../../services/exportService';
 import { useGuaranteedInsets } from '../../navigation/safeArea';
 
 export interface ExportScreenProps {
@@ -50,6 +53,8 @@ export const ExportScreen: React.FC<ExportScreenProps> = ({
   onExportComplete,
 }) => {
   const insets = useGuaranteedInsets();
+  const exportAttempt = useRef(0);
+  useEffect(() => () => { exportAttempt.current += 1; }, []);
   const [project, setProject] = useState<Project | null>(null);
   const [resolution, setResolution] = useState<ExportResolutionPreset>('1080p');
   const [fps, setFps] = useState<ExportFpsPreset>(30);
@@ -80,118 +85,55 @@ export const ExportScreen: React.FC<ExportScreenProps> = ({
     setProgress(0.05);
     setOutputPath(null);
 
-    const cleanTitle = project.metadata.title.replace(/[^a-zA-Z0-9_-]/g, '_') || 'Export';
-    const serverHosts = ['http://192.168.31.242:8765', 'http://127.0.0.1:8765', 'http://10.0.2.2:8765'];
-
-    // Collect clips from project.clips or tracks
-    const clipsToExport = Object.values(project.clips || {}).map((c) => ({
-      id: c.id,
-      trackId: c.trackId,
-      type: c.type,
-      uri: (project.assets && (c as any).assetId && project.assets[(c as any).assetId]?.uri) || (c as any).uri || '',
-      name: c.name,
-      startUs: c.timelineRange.startUs,
-      durationUs: c.timelineRange.durationUs,
-      sourceStartUs: (c as any).sourceRange?.startUs || 0,
-      sourceDurationUs: (c as any).sourceRange?.durationUs || c.timelineRange.durationUs,
-      speed: (c as any).speed || 1.0,
-      volume: (c as any).volume || 1.0,
-      filterId: (c as any).lutFilterId || null,
-      transitionOut: (c as any).transitionOut?.type || null,
-      text: (c as any).text || null,
-    }));
-
-    let connectedHost: string | null = null;
-    for (const host of serverHosts) {
-      try {
-        const ping = await fetch(`${host}/health`, { method: 'GET' });
-        if (ping.ok) {
-          connectedHost = host;
-          break;
+    const attempt = ++exportAttempt.current;
+    const active = () => exportAttempt.current === attempt;
+    const host = defaultAIEngineService.getBaseUrl();
+    try {
+      const clips = await prepareExportClips(project);
+      if (!active()) return;
+      const res = await fetch(`${host}/export`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ projectId: project.metadata.id, title: project.metadata.title,
+          aspectRatio: project.settings.aspectRatio, resolution, fps, quality, clips }),
+        signal: AbortSignal.timeout(30_000),
+      });
+      if (!res.ok) throw new Error(`Export rejected (${res.status}): ${await res.text()}`);
+      const { jobId } = await res.json();
+      if (!jobId) throw new Error('Server did not return an export job.');
+      const deadline = Date.now() + 30 * 60_000;
+      while (active() && Date.now() < deadline) {
+        await new Promise(r => setTimeout(r, 1000));
+        if (!active()) return;
+        const check = await fetch(`${host}/export/${encodeURIComponent(jobId)}`, { signal: AbortSignal.timeout(30_000) });
+        if (!check.ok) throw new Error(`Cannot read export status (${check.status}).`);
+        const job = await check.json();
+        if (!active()) return;
+        setProgress(job.progress ?? 0);
+        if (job.status === 'failed') throw new Error(job.error || 'Rendering failed.');
+        if (job.status === 'completed') {
+          if (!job.filename) throw new Error('Server did not return a downloadable video.');
+          const downloadUrl = `${host}/download/${encodeURIComponent(job.filename)}`;
+          const saved = Platform.OS === 'web' ? downloadUrl :
+            (await File.downloadFileAsync(downloadUrl, new File(Paths.document, job.filename), { idempotent: true })).uri;
+          if (!active()) return;
+          setOutputPath(saved);
+          onExportComplete?.(saved);
+          return;
         }
-      } catch {}
-    }
-
-    if (connectedHost) {
-      try {
-        const res = await fetch(`${connectedHost}/export`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            projectId: project.metadata.id,
-            title: cleanTitle,
-            aspectRatio: project.settings.aspectRatio,
-            resolution,
-            fps,
-            quality,
-            clips: clipsToExport,
-          }),
-        });
-
-        const data = await res.json();
-        const jobId = data.jobId;
-
-        // Poll for real FFmpeg progress
-        let done = false;
-        while (!done) {
-          await new Promise((r) => setTimeout(r, 400));
-          const check = await fetch(`${connectedHost}/export/${jobId}`);
-          if (check.ok) {
-            const job = await check.json();
-            setProgress(job.progress || 0.1);
-
-            if (job.status === 'completed') {
-              done = true;
-              setIsExporting(false);
-              let localSavedPath = job.outputPath;
-
-              // If connected via network and Paths.document is present, fetch to device storage
-              if (job.filename && Paths.document) {
-                try {
-                  const downloadUrl = `${connectedHost}/download/${job.filename}`;
-                  const targetFile = new File(Paths.document, job.filename);
-                  const dlResult = await File.downloadFileAsync(downloadUrl, targetFile, { idempotent: true });
-                  if (dlResult && dlResult.uri) {
-                    localSavedPath = dlResult.uri;
-                  }
-                } catch (dlErr) {
-                  console.warn('Could not cache export to local device storage:', dlErr);
-                }
-              }
-
-              setOutputPath(localSavedPath);
-              if (onExportComplete) onExportComplete(localSavedPath);
-              break;
-            } else if (job.status === 'failed') {
-              throw new Error(job.error || 'FFmpeg render error');
-            }
-          }
-        }
-        return;
-      } catch (err: any) {
-        console.warn('Server export error, falling back:', err);
       }
+      if (active()) throw new Error('Export timed out. Check the server before retrying.');
+    } catch (error) {
+      if (active()) Alert.alert('Export failed', error instanceof Error ? error.message : String(error));
+    } finally {
+      if (active()) setIsExporting(false);
     }
-
-    // Graceful offline fallback
-    let current = 0.05;
-    const interval = setInterval(() => {
-      current += 0.1;
-      if (current >= 1.0) {
-        clearInterval(interval);
-        setIsExporting(false);
-        const localPath = `file:///storage/emulated/0/Movies/NovaCut_${cleanTitle}_${Date.now()}.mp4`;
-        setOutputPath(localPath);
-        if (onExportComplete) onExportComplete(localPath);
-      } else {
-        setProgress(Math.min(0.95, current));
-      }
-    }, 200);
   };
 
   const handleCancelExport = () => {
+    exportAttempt.current += 1;
     setIsExporting(false);
     setProgress(0);
+    Alert.alert('Stopped waiting', 'The server may continue rendering this job.');
   };
 
   const handleShareVideo = async () => {

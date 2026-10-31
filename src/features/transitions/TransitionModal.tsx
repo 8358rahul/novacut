@@ -1,5 +1,6 @@
+import { AppModal as Modal } from '../../components/AppModal';
 import React from 'react';
-import { View, Text, StyleSheet, Modal, TouchableOpacity } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { colors, spacing, borderRadius } from '../../theme';
 import { TransitionType, Transition } from '../../core/models/clip';
 import { secondsToMicros } from '../../core/models/timeline';

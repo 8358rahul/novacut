@@ -1,0 +1,1294 @@
+{
+  "sha256": "2dd6d36cd2fd5bef0f9fde3fe94e26804ecdf0c3545085bb6fa16c5b774c8d85",
+  "layouts": [
+    {
+      "entry": "assets/splitscreen/split_screen_2.zip",
+      "canvas": {
+        "ratio": "1:1",
+        "width": 1440,
+        "height": 1440
+      },
+      "duration_us": 2240000,
+      "fps": 30,
+      "segments": [
+        {
+          "track_flag": 0,
+          "target_range": {
+            "duration": 2240000,
+            "start": 0
+          },
+          "transform": {
+            "alpha": 1,
+            "flip": {
+              "horizontal": false,
+              "vertical": false
+            },
+            "rotation": 0,
+            "scale": {
+              "x": 1,
+              "y": 1
+            },
+            "transform": {
+              "x": 0,
+              "y": 0.25
+            }
+          },
+          "source_dimensions": {
+            "width": 1440,
+            "height": 720
+          }
+        },
+        {
+          "track_flag": 2,
+          "target_range": {
+            "duration": 2240000,
+            "start": 0
+          },
+          "transform": {
+            "alpha": 1,
+            "flip": {
+              "horizontal": false,
+              "vertical": false
+            },
+            "rotation": 0,
+            "scale": {
+              "x": 1,
+              "y": 1
+            },
+            "transform": {
+              "x": 0,
+              "y": -0.25
+            }
+          },
+          "source_dimensions": {
+            "width": 1440,
+            "height": 720
+          }
+        }
+      ]
+    },
+    {
+      "entry": "assets/splitscreen/split_screen_3.zip",
+      "canvas": {
+        "ratio": "1:1",
+        "width": 1440,
+        "height": 1440
+      },
+      "duration_us": 2240000,
+      "fps": 30,
+      "segments": [
+        {
+          "track_flag": 0,
+          "target_range": {
+            "duration": 2240000,
+            "start": 0
+          },
+          "transform": {
+            "alpha": 1,
+            "flip": {
+              "horizontal": false,
+              "vertical": false
+            },
+            "rotation": 0,
+            "scale": {
+              "x": 1,
+              "y": 1
+            },
+            "transform": {
+              "x": 0,
+              "y": 0.33333335
+            }
+          },
+          "source_dimensions": {
+            "width": 1440,
+            "height": 479.999952
+          }
+        },
+        {
+          "track_flag": 2,
+          "target_range": {
+            "duration": 2240000,
+            "start": 0
+          },
+          "transform": {
+            "alpha": 1,
+            "flip": {
+              "horizontal": false,
+              "vertical": false
+            },
+            "rotation": 0,
+            "scale": {
+              "x": 1,
+              "y": 1
+            },
+            "transform": {
+              "x": 0,
+              "y": 5.000000000143778e-08
+            }
+          },
+          "source_dimensions": {
+            "width": 1440,
+            "height": 479.999952
+          }
+        },
+        {
+          "track_flag": 2,
+          "target_range": {
+            "duration": 2240000,
+            "start": 0
+          },
+          "transform": {
+            "alpha": 1,
+            "flip": {
+              "horizontal": false,
+              "vertical": false
+            },
+            "rotation": 0,
+            "scale": {
+              "x": 1,
+              "y": 1
+            },
+            "transform": {
+              "x": 0,
+              "y": -0.3333333
+            }
+          },
+          "source_dimensions": {
+            "width": 1440,
+            "height": 480.000096
+          }
+        }
+      ]
+    },
+    {
+      "entry": "assets/splitscreen/split_screen_4.zip",
+      "canvas": {
+        "ratio": "1:1",
+        "width": 1440,
+        "height": 1440
+      },
+      "duration_us": 2240000,
+      "fps": 30,
+      "segments": [
+        {
+          "track_flag": 0,
+          "target_range": {
+            "duration": 2240000,
+            "start": 0
+          },
+          "transform": {
+            "alpha": 1,
+            "flip": {
+              "horizontal": false,
+              "vertical": false
+            },
+            "rotation": 0,
+            "scale": {
+              "x": 1,
+              "y": 1
+            },
+            "transform": {
+              "x": -0.25,
+              "y": 0.25
+            }
+          },
+          "source_dimensions": {
+            "width": 720,
+            "height": 720
+          }
+        },
+        {
+          "track_flag": 2,
+          "target_range": {
+            "duration": 2240000,
+            "start": 0
+          },
+          "transform": {
+            "alpha": 1,
+            "flip": {
+              "horizontal": false,
+              "vertical": false
+            },
+            "rotation": 0,
+            "scale": {
+              "x": 1,
+              "y": 1
+            },
+            "transform": {
+              "x": 0.25,
+              "y": 0.25
+            }
+          },
+          "source_dimensions": {
+            "width": 720,
+            "height": 720
+          }
+        },
+        {
+          "track_flag": 2,
+          "target_range": {
+            "duration": 2240000,
+            "start": 0
+          },
+          "transform": {
+            "alpha": 1,
+            "flip": {
+              "horizontal": false,
+              "vertical": false
+            },
+            "rotation": 0,
+            "scale": {
+              "x": 1,
+              "y": 1
+            },
+            "transform": {
+              "x": -0.25,
+              "y": -0.25
+            }
+          },
+          "source_dimensions": {
+            "width": 720,
+            "height": 720
+          }
+        },
+        {
+          "track_flag": 2,
+          "target_range": {
+            "duration": 2240000,
+            "start": 0
+          },
+          "transform": {
+            "alpha": 1,
+            "flip": {
+              "horizontal": false,
+              "vertical": false
+            },
+            "rotation": 0,
+            "scale": {
+              "x": 1,
+              "y": 1
+            },
+            "transform": {
+              "x": 0.25,
+              "y": -0.25
+            }
+          },
+          "source_dimensions": {
+            "width": 720,
+            "height": 720
+          }
+        }
+      ]
+    },
+    {
+      "entry": "assets/splitscreen/split_screen_5.zip",
+      "canvas": {
+        "ratio": "1:1",
+        "width": 1440,
+        "height": 1440
+      },
+      "duration_us": 2240000,
+      "fps": 30,
+      "segments": [
+        {
+          "track_flag": 0,
+          "target_range": {
+            "duration": 2240000,
+            "start": 0
+          },
+          "transform": {
+            "alpha": 1,
+            "flip": {
+              "horizontal": false,
+              "vertical": false
+            },
+            "rotation": 0,
+            "scale": {
+              "x": 1,
+              "y": 1
+            },
+            "transform": {
+              "x": 0,
+              "y": 0.4
+            }
+          },
+          "source_dimensions": {
+            "width": 1440,
+            "height": 288
+          }
+        },
+        {
+          "track_flag": 2,
+          "target_range": {
+            "duration": 2240000,
+            "start": 0
+          },
+          "transform": {
+            "alpha": 1,
+            "flip": {
+              "horizontal": false,
+              "vertical": false
+            },
+            "rotation": 0,
+            "scale": {
+              "x": 1,
+              "y": 1
+            },
+            "transform": {
+              "x": 0,
+              "y": 0.19999999999999998
+            }
+          },
+          "source_dimensions": {
+            "width": 1440,
+            "height": 288
+          }
+        },
+        {
+          "track_flag": 2,
+          "target_range": {
+            "duration": 2240000,
+            "start": 0
+          },
+          "transform": {
+            "alpha": 1,
+            "flip": {
+              "horizontal": false,
+              "vertical": false
+            },
+            "rotation": 0,
+            "scale": {
+              "x": 1,
+              "y": 1
+            },
+            "transform": {
+              "x": 0,
+              "y": 0
+            }
+          },
+          "source_dimensions": {
+            "width": 1440,
+            "height": 287.99999999999994
+          }
+        },
+        {
+          "track_flag": 2,
+          "target_range": {
+            "duration": 2240000,
+            "start": 0
+          },
+          "transform": {
+            "alpha": 1,
+            "flip": {
+              "horizontal": false,
+              "vertical": false
+            },
+            "rotation": 0,
+            "scale": {
+              "x": 1,
+              "y": 1
+            },
+            "transform": {
+              "x": 0,
+              "y": -0.2
+            }
+          },
+          "source_dimensions": {
+            "width": 1440,
+            "height": 288.0000000000001
+          }
+        },
+        {
+          "track_flag": 2,
+          "target_range": {
+            "duration": 2240000,
+            "start": 0
+          },
+          "transform": {
+            "alpha": 1,
+            "flip": {
+              "horizontal": false,
+              "vertical": false
+            },
+            "rotation": 0,
+            "scale": {
+              "x": 1,
+              "y": 1
+            },
+            "transform": {
+              "x": 0,
+              "y": -0.4
+            }
+          },
+          "source_dimensions": {
+            "width": 1440,
+            "height": 287.99999999999994
+          }
+        }
+      ]
+    },
+    {
+      "entry": "assets/splitscreen/split_screen_6.zip",
+      "canvas": {
+        "ratio": "1:1",
+        "width": 1440,
+        "height": 1440
+      },
+      "duration_us": 2240000,
+      "fps": 30,
+      "segments": [
+        {
+          "track_flag": 0,
+          "target_range": {
+            "duration": 2240000,
+            "start": 0
+          },
+          "transform": {
+            "alpha": 1,
+            "flip": {
+              "horizontal": false,
+              "vertical": false
+            },
+            "rotation": 0,
+            "scale": {
+              "x": 1,
+              "y": 1
+            },
+            "transform": {
+              "x": -0.25,
+              "y": 0.3333335
+            }
+          },
+          "source_dimensions": {
+            "width": 720,
+            "height": 479.99951999999996
+          }
+        },
+        {
+          "track_flag": 2,
+          "target_range": {
+            "duration": 2240000,
+            "start": 0
+          },
+          "transform": {
+            "alpha": 1,
+            "flip": {
+              "horizontal": false,
+              "vertical": false
+            },
+            "rotation": 0,
+            "scale": {
+              "x": 1,
+              "y": 1
+            },
+            "transform": {
+              "x": 0.25,
+              "y": 0.3333335
+            }
+          },
+          "source_dimensions": {
+            "width": 720,
+            "height": 479.99951999999996
+          }
+        },
+        {
+          "track_flag": 2,
+          "target_range": {
+            "duration": 2240000,
+            "start": 0
+          },
+          "transform": {
+            "alpha": 1,
+            "flip": {
+              "horizontal": false,
+              "vertical": false
+            },
+            "rotation": 0,
+            "scale": {
+              "x": 1,
+              "y": 1
+            },
+            "transform": {
+              "x": -0.25,
+              "y": 5.000000000143778e-07
+            }
+          },
+          "source_dimensions": {
+            "width": 720,
+            "height": 479.99951999999996
+          }
+        },
+        {
+          "track_flag": 2,
+          "target_range": {
+            "duration": 2240000,
+            "start": 0
+          },
+          "transform": {
+            "alpha": 1,
+            "flip": {
+              "horizontal": false,
+              "vertical": false
+            },
+            "rotation": 0,
+            "scale": {
+              "x": 1,
+              "y": 1
+            },
+            "transform": {
+              "x": 0.25,
+              "y": 5.000000000143778e-07
+            }
+          },
+          "source_dimensions": {
+            "width": 720,
+            "height": 479.99951999999996
+          }
+        },
+        {
+          "track_flag": 2,
+          "target_range": {
+            "duration": 2240000,
+            "start": 0
+          },
+          "transform": {
+            "alpha": 1,
+            "flip": {
+              "horizontal": false,
+              "vertical": false
+            },
+            "rotation": 0,
+            "scale": {
+              "x": 1,
+              "y": 1
+            },
+            "transform": {
+              "x": -0.25,
+              "y": -0.333333
+            }
+          },
+          "source_dimensions": {
+            "width": 720,
+            "height": 480.00096
+          }
+        },
+        {
+          "track_flag": 2,
+          "target_range": {
+            "duration": 2240000,
+            "start": 0
+          },
+          "transform": {
+            "alpha": 1,
+            "flip": {
+              "horizontal": false,
+              "vertical": false
+            },
+            "rotation": 0,
+            "scale": {
+              "x": 1,
+              "y": 1
+            },
+            "transform": {
+              "x": 0.25,
+              "y": -0.333333
+            }
+          },
+          "source_dimensions": {
+            "width": 720,
+            "height": 480.00096
+          }
+        }
+      ]
+    },
+    {
+      "entry": "assets/splitscreen/split_screen_7.zip",
+      "canvas": {
+        "ratio": "1:1",
+        "width": 1440,
+        "height": 1440
+      },
+      "duration_us": 2240000,
+      "fps": 30,
+      "segments": [
+        {
+          "track_flag": 0,
+          "target_range": {
+            "duration": 2240000,
+            "start": 0
+          },
+          "transform": {
+            "alpha": 1,
+            "flip": {
+              "horizontal": false,
+              "vertical": false
+            },
+            "rotation": 0,
+            "scale": {
+              "x": 1,
+              "y": 1
+            },
+            "transform": {
+              "x": -0.3333335,
+              "y": 0.25
+            }
+          },
+          "source_dimensions": {
+            "width": 479.99951999999996,
+            "height": 720
+          }
+        },
+        {
+          "track_flag": 2,
+          "target_range": {
+            "duration": 2240000,
+            "start": 0
+          },
+          "transform": {
+            "alpha": 1,
+            "flip": {
+              "horizontal": false,
+              "vertical": false
+            },
+            "rotation": 0,
+            "scale": {
+              "x": 1,
+              "y": 1
+            },
+            "transform": {
+              "x": -5.000000000143778e-07,
+              "y": 0.25
+            }
+          },
+          "source_dimensions": {
+            "width": 479.99951999999996,
+            "height": 720
+          }
+        },
+        {
+          "track_flag": 2,
+          "target_range": {
+            "duration": 2240000,
+            "start": 0
+          },
+          "transform": {
+            "alpha": 1,
+            "flip": {
+              "horizontal": false,
+              "vertical": false
+            },
+            "rotation": 0,
+            "scale": {
+              "x": 1,
+              "y": 1
+            },
+            "transform": {
+              "x": 0.333333,
+              "y": 0.25
+            }
+          },
+          "source_dimensions": {
+            "width": 480.00096,
+            "height": 720
+          }
+        },
+        {
+          "track_flag": 2,
+          "target_range": {
+            "duration": 2240000,
+            "start": 0
+          },
+          "transform": {
+            "alpha": 1,
+            "flip": {
+              "horizontal": false,
+              "vertical": false
+            },
+            "rotation": 0,
+            "scale": {
+              "x": 1,
+              "y": 1
+            },
+            "transform": {
+              "x": -0.375,
+              "y": -0.25
+            }
+          },
+          "source_dimensions": {
+            "width": 360,
+            "height": 720
+          }
+        },
+        {
+          "track_flag": 2,
+          "target_range": {
+            "duration": 2240000,
+            "start": 0
+          },
+          "transform": {
+            "alpha": 1,
+            "flip": {
+              "horizontal": false,
+              "vertical": false
+            },
+            "rotation": 0,
+            "scale": {
+              "x": 1,
+              "y": 1
+            },
+            "transform": {
+              "x": -0.125,
+              "y": -0.25
+            }
+          },
+          "source_dimensions": {
+            "width": 360,
+            "height": 720
+          }
+        },
+        {
+          "track_flag": 2,
+          "target_range": {
+            "duration": 2240000,
+            "start": 0
+          },
+          "transform": {
+            "alpha": 1,
+            "flip": {
+              "horizontal": false,
+              "vertical": false
+            },
+            "rotation": 0,
+            "scale": {
+              "x": 1,
+              "y": 1
+            },
+            "transform": {
+              "x": 0.125,
+              "y": -0.25
+            }
+          },
+          "source_dimensions": {
+            "width": 360,
+            "height": 720
+          }
+        },
+        {
+          "track_flag": 2,
+          "target_range": {
+            "duration": 2240000,
+            "start": 0
+          },
+          "transform": {
+            "alpha": 1,
+            "flip": {
+              "horizontal": false,
+              "vertical": false
+            },
+            "rotation": 0,
+            "scale": {
+              "x": 1,
+              "y": 1
+            },
+            "transform": {
+              "x": 0.375,
+              "y": -0.25
+            }
+          },
+          "source_dimensions": {
+            "width": 360,
+            "height": 720
+          }
+        }
+      ]
+    },
+    {
+      "entry": "assets/splitscreen/split_screen_8.zip",
+      "canvas": {
+        "ratio": "1:1",
+        "width": 1440,
+        "height": 1440
+      },
+      "duration_us": 2240000,
+      "fps": 30,
+      "segments": [
+        {
+          "track_flag": 0,
+          "target_range": {
+            "duration": 2240000,
+            "start": 0
+          },
+          "transform": {
+            "alpha": 1,
+            "flip": {
+              "horizontal": false,
+              "vertical": false
+            },
+            "rotation": 0,
+            "scale": {
+              "x": 1,
+              "y": 1
+            },
+            "transform": {
+              "x": -0.25,
+              "y": 0.375
+            }
+          },
+          "source_dimensions": {
+            "width": 720,
+            "height": 360
+          }
+        },
+        {
+          "track_flag": 2,
+          "target_range": {
+            "duration": 2240000,
+            "start": 0
+          },
+          "transform": {
+            "alpha": 1,
+            "flip": {
+              "horizontal": false,
+              "vertical": false
+            },
+            "rotation": 0,
+            "scale": {
+              "x": 1,
+              "y": 1
+            },
+            "transform": {
+              "x": 0.25,
+              "y": 0.375
+            }
+          },
+          "source_dimensions": {
+            "width": 720,
+            "height": 360
+          }
+        },
+        {
+          "track_flag": 2,
+          "target_range": {
+            "duration": 2240000,
+            "start": 0
+          },
+          "transform": {
+            "alpha": 1,
+            "flip": {
+              "horizontal": false,
+              "vertical": false
+            },
+            "rotation": 0,
+            "scale": {
+              "x": 1,
+              "y": 1
+            },
+            "transform": {
+              "x": -0.25,
+              "y": 0.125
+            }
+          },
+          "source_dimensions": {
+            "width": 720,
+            "height": 360
+          }
+        },
+        {
+          "track_flag": 2,
+          "target_range": {
+            "duration": 2240000,
+            "start": 0
+          },
+          "transform": {
+            "alpha": 1,
+            "flip": {
+              "horizontal": false,
+              "vertical": false
+            },
+            "rotation": 0,
+            "scale": {
+              "x": 1,
+              "y": 1
+            },
+            "transform": {
+              "x": 0.25,
+              "y": 0.125
+            }
+          },
+          "source_dimensions": {
+            "width": 720,
+            "height": 360
+          }
+        },
+        {
+          "track_flag": 2,
+          "target_range": {
+            "duration": 2240000,
+            "start": 0
+          },
+          "transform": {
+            "alpha": 1,
+            "flip": {
+              "horizontal": false,
+              "vertical": false
+            },
+            "rotation": 0,
+            "scale": {
+              "x": 1,
+              "y": 1
+            },
+            "transform": {
+              "x": -0.25,
+              "y": -0.125
+            }
+          },
+          "source_dimensions": {
+            "width": 720,
+            "height": 360
+          }
+        },
+        {
+          "track_flag": 2,
+          "target_range": {
+            "duration": 2240000,
+            "start": 0
+          },
+          "transform": {
+            "alpha": 1,
+            "flip": {
+              "horizontal": false,
+              "vertical": false
+            },
+            "rotation": 0,
+            "scale": {
+              "x": 1,
+              "y": 1
+            },
+            "transform": {
+              "x": 0.25,
+              "y": -0.125
+            }
+          },
+          "source_dimensions": {
+            "width": 720,
+            "height": 360
+          }
+        },
+        {
+          "track_flag": 2,
+          "target_range": {
+            "duration": 2240000,
+            "start": 0
+          },
+          "transform": {
+            "alpha": 1,
+            "flip": {
+              "horizontal": false,
+              "vertical": false
+            },
+            "rotation": 0,
+            "scale": {
+              "x": 1,
+              "y": 1
+            },
+            "transform": {
+              "x": -0.25,
+              "y": -0.375
+            }
+          },
+          "source_dimensions": {
+            "width": 720,
+            "height": 360
+          }
+        },
+        {
+          "track_flag": 2,
+          "target_range": {
+            "duration": 2240000,
+            "start": 0
+          },
+          "transform": {
+            "alpha": 1,
+            "flip": {
+              "horizontal": false,
+              "vertical": false
+            },
+            "rotation": 0,
+            "scale": {
+              "x": 1,
+              "y": 1
+            },
+            "transform": {
+              "x": 0.25,
+              "y": -0.375
+            }
+          },
+          "source_dimensions": {
+            "width": 720,
+            "height": 360
+          }
+        }
+      ]
+    },
+    {
+      "entry": "assets/splitscreen/split_screen_9.zip",
+      "canvas": {
+        "ratio": "1:1",
+        "width": 1440,
+        "height": 1440
+      },
+      "duration_us": 2240000,
+      "fps": 30,
+      "segments": [
+        {
+          "track_flag": 0,
+          "target_range": {
+            "duration": 2240000,
+            "start": 0
+          },
+          "transform": {
+            "alpha": 1,
+            "flip": {
+              "horizontal": false,
+              "vertical": false
+            },
+            "rotation": 0,
+            "scale": {
+              "x": 1,
+              "y": 1
+            },
+            "transform": {
+              "x": -0.375,
+              "y": 0.375
+            }
+          },
+          "source_dimensions": {
+            "width": 360,
+            "height": 360
+          }
+        },
+        {
+          "track_flag": 2,
+          "target_range": {
+            "duration": 2240000,
+            "start": 0
+          },
+          "transform": {
+            "alpha": 1,
+            "flip": {
+              "horizontal": false,
+              "vertical": false
+            },
+            "rotation": 0,
+            "scale": {
+              "x": 1,
+              "y": 1
+            },
+            "transform": {
+              "x": -0.125,
+              "y": 0.375
+            }
+          },
+          "source_dimensions": {
+            "width": 360,
+            "height": 360
+          }
+        },
+        {
+          "track_flag": 2,
+          "target_range": {
+            "duration": 2240000,
+            "start": 0
+          },
+          "transform": {
+            "alpha": 1,
+            "flip": {
+              "horizontal": false,
+              "vertical": false
+            },
+            "rotation": 0,
+            "scale": {
+              "x": 1,
+              "y": 1
+            },
+            "transform": {
+              "x": 0.125,
+              "y": 0.375
+            }
+          },
+          "source_dimensions": {
+            "width": 360,
+            "height": 360
+          }
+        },
+        {
+          "track_flag": 2,
+          "target_range": {
+            "duration": 2240000,
+            "start": 0
+          },
+          "transform": {
+            "alpha": 1,
+            "flip": {
+              "horizontal": false,
+              "vertical": false
+            },
+            "rotation": 0,
+            "scale": {
+              "x": 1,
+              "y": 1
+            },
+            "transform": {
+              "x": 0.375,
+              "y": 0.375
+            }
+          },
+          "source_dimensions": {
+            "width": 360,
+            "height": 360
+          }
+        },
+        {
+          "track_flag": 2,
+          "target_range": {
+            "duration": 2240000,
+            "start": 0
+          },
+          "transform": {
+            "alpha": 1,
+            "flip": {
+              "horizontal": false,
+              "vertical": false
+            },
+            "rotation": 0,
+            "scale": {
+              "x": 1,
+              "y": 1
+            },
+            "transform": {
+              "x": -0.375,
+              "y": 0.125
+            }
+          },
+          "source_dimensions": {
+            "width": 360,
+            "height": 360
+          }
+        },
+        {
+          "track_flag": 2,
+          "target_range": {
+            "duration": 2240000,
+            "start": 0
+          },
+          "transform": {
+            "alpha": 1,
+            "flip": {
+              "horizontal": false,
+              "vertical": false
+            },
+            "rotation": 0,
+            "scale": {
+              "x": 1,
+              "y": 1
+            },
+            "transform": {
+              "x": -0.125,
+              "y": 0.125
+            }
+          },
+          "source_dimensions": {
+            "width": 360,
+            "height": 360
+          }
+        },
+        {
+          "track_flag": 2,
+          "target_range": {
+            "duration": 2240000,
+            "start": 0
+          },
+          "transform": {
+            "alpha": 1,
+            "flip": {
+              "horizontal": false,
+              "vertical": false
+            },
+            "rotation": 0,
+            "scale": {
+              "x": 1,
+              "y": 1
+            },
+            "transform": {
+              "x": 0.125,
+              "y": 0.125
+            }
+          },
+          "source_dimensions": {
+            "width": 360,
+            "height": 360
+          }
+        },
+        {
+          "track_flag": 2,
+          "target_range": {
+            "duration": 2240000,
+            "start": 0
+          },
+          "transform": {
+            "alpha": 1,
+            "flip": {
+              "horizontal": false,
+              "vertical": false
+            },
+            "rotation": 0,
+            "scale": {
+              "x": 1,
+              "y": 1
+            },
+            "transform": {
+              "x": 0.375,
+              "y": 0.125
+            }
+          },
+          "source_dimensions": {
+            "width": 360,
+            "height": 360
+          }
+        },
+        {
+          "track_flag": 2,
+          "target_range": {
+            "duration": 2240000,
+            "start": 0
+          },
+          "transform": {
+            "alpha": 1,
+            "flip": {
+              "horizontal": false,
+              "vertical": false
+            },
+            "rotation": 0,
+            "scale": {
+              "x": 1,
+              "y": 1
+            },
+            "transform": {
+              "x": 0,
+              "y": -0.25
+            }
+          },
+          "source_dimensions": {
+            "width": 1440,
+            "height": 720
+          }
+        }
+      ]
+    }
+  ],
+  "limitations": [
+    "Static bundled examples only; no runtime behavior or current draft compatibility verified.",
+    "No proprietary code, media, identifiers or entire templates are reproduced."
+  ],
+  "entry_count": 27706
+}

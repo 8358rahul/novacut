@@ -246,7 +246,7 @@ export const SearchScreen: React.FC<SearchScreenProps> = ({
             <View style={styles.emptyState}>
               <Text style={styles.emptyIcon}>🔍</Text>
               <Text style={styles.emptyTitle}>No Results Found</Text>
-              <Text style={styles.emptySubtitle}>Try searching for "Beat Sync", "Travel", "Glitch", or "Lo-Fi".</Text>
+              <Text style={styles.emptySubtitle}>Try searching for &quot;Beat Sync&quot;, &quot;Travel&quot;, &quot;Glitch&quot;, or &quot;Lo-Fi&quot;.</Text>
             </View>
           }
         />

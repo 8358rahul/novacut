@@ -1,5 +1,6 @@
+import { AppModal as Modal } from '../../components/AppModal';
 import React from 'react';
-import { View, Text, StyleSheet, Modal, TouchableOpacity, ScrollView } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView } from 'react-native';
 import { colors, spacing, borderRadius } from '../../theme';
 import { SpeedCurve, SpeedCurvePreset } from '../../core/models/clip';
 import { createSpeedCurveFromPreset } from '../../core/timeline/speedCurves';
@@ -49,7 +50,7 @@ export const SpeedCurveModal: React.FC<SpeedCurveModalProps> = ({
             </TouchableOpacity>
           </View>
 
-          <ScrollView style={styles.list} showsVerticalScrollIndicator={false}>
+          <ScrollView keyboardShouldPersistTaps="handled" style={styles.list} showsVerticalScrollIndicator={false}>
             {PRESET_OPTIONS.map((item) => {
               const isSelected = activePreset === item.id;
               return (

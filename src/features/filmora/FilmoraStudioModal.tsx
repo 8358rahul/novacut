@@ -1,9 +1,9 @@
+import { AppModal as Modal } from '../../components/AppModal';
 import React, { useState, useMemo } from 'react';
 import {
   View,
   Text,
   StyleSheet,
-  Modal,
   TouchableOpacity,
   ScrollView,
   Alert,
@@ -136,7 +136,7 @@ export const FilmoraStudioModal: React.FC<FilmoraStudioModalProps> = ({
             </TouchableOpacity>
           </View>
 
-          <ScrollView style={styles.content}>
+          <ScrollView keyboardShouldPersistTaps="handled" style={styles.content}>
             {activeTab === 'ducking' && (
               <View style={styles.section}>
                 <View style={styles.infoCard}>
@@ -258,7 +258,7 @@ export const FilmoraStudioModal: React.FC<FilmoraStudioModalProps> = ({
                 <View style={styles.infoCard}>
                   <Text style={styles.infoTitle}>Filmora Bandwidth Probe & Slicing</Text>
                   <Text style={styles.infoBody}>
-                    Clean-room reverse-engineered implementation of Wondershare's multi-chunk
+                    Clean-room reverse-engineered implementation of Wondershare&#39;s multi-chunk
                     accelerated downloader with real-time CDN throughput probing and HTTP Range slicing.
                   </Text>
                   <View style={styles.statsRow}>

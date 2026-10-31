@@ -1,3 +1,4 @@
+import { AppModal as Modal } from '../../components/AppModal';
 import React, { useState, useMemo } from 'react';
 import {
   View,
@@ -6,7 +7,6 @@ import {
   FlatList,
   TouchableOpacity,
   ScrollView,
-  Modal,
   Alert,
 } from 'react-native';
 import { colors, spacing, borderRadius } from '../../theme';
@@ -176,7 +176,7 @@ export const TemplatesScreen: React.FC<TemplatesScreenProps> = ({
 
       {/* Category Pills Header */}
       <View style={styles.categoryContainer}>
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.categoryScroll}>
+        <ScrollView keyboardShouldPersistTaps="handled" horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.categoryScroll}>
           {CATEGORIES.map((cat) => (
             <TouchableOpacity
               key={cat}
@@ -258,7 +258,7 @@ export const TemplatesScreen: React.FC<TemplatesScreenProps> = ({
                 Required Media Slots ({selectedSlots.length}/{activeTemplate.slots.length} Ready)
               </Text>
 
-              <ScrollView style={styles.slotsScroll} showsVerticalScrollIndicator={false}>
+              <ScrollView keyboardShouldPersistTaps="handled" style={styles.slotsScroll} showsVerticalScrollIndicator={false}>
                 {activeTemplate.slots.map((slot, index) => {
                   const assigned = selectedSlots.find((s) => s.slotIndex === index);
                   return (

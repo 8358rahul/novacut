@@ -6,6 +6,7 @@
 
 // Safely resolve default endpoint for Physical iOS Device, Android Emulator, or Localhost
 export function getDefaultEngineUrl(): string {
+  if (process.env.EXPO_PUBLIC_ENGINE_URL) return process.env.EXPO_PUBLIC_ENGINE_URL.replace(/\/$/, '');
   try {
     // Dynamically check Expo hostUri so real physical iOS/Android devices connect to dev machine IP
     const Constants = require('expo-constants')?.default;
@@ -120,8 +121,10 @@ export class AIEngineService {
     try {
       // Local device file URI (file:///var/mobile/..., ph://, content://, blob:..., etc.)
       const formData = new FormData();
-      const ext = uri.toLowerCase().includes('.png') ? 'png' : 'jpg';
-      const mime = ext === 'png' ? 'image/png' : 'image/jpeg';
+      const ext = uri.split(/[?#]/)[0].match(/\.([a-zA-Z0-9]+)$/)?.[1].toLowerCase() || 'bin';
+      const mime = ({ png: 'image/png', jpg: 'image/jpeg', jpeg: 'image/jpeg',
+        mp4: 'video/mp4', mov: 'video/quicktime', m4a: 'audio/mp4',
+        mp3: 'audio/mpeg', wav: 'audio/wav', webm: 'video/webm' } as Record<string, string>)[ext] || 'application/octet-stream';
 
       if (uri.startsWith('blob:') && typeof fetch !== 'undefined') {
         const blobRes = await fetch(uri);
@@ -138,16 +141,20 @@ export class AIEngineService {
       const res = await fetch(`${this.baseUrl}/ai/upload`, {
         method: 'POST',
         body: formData,
+        signal: AbortSignal.timeout(300_000),
       });
 
       if (res.ok) {
         const data = await res.json();
-        return data.downloadUrl || uri;
+        if (typeof data.downloadUrl !== 'string' || !data.downloadUrl.startsWith('/cache/')) {
+          throw new Error('Server returned an invalid upload reference');
+        }
+        return data.downloadUrl;
       }
+      throw new Error(`Media upload failed (${res.status})`);
     } catch (err) {
-      console.warn('AI media upload failed, attempting fallback with original URI:', err);
+      throw new Error(`Cannot upload media: ${err instanceof Error ? err.message : String(err)}`);
     }
-    return uri;
   }
 
   /**

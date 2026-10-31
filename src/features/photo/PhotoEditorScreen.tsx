@@ -1,3 +1,4 @@
+import { AppModal as Modal } from '../../components/AppModal';
 import React, { useState, useMemo, useCallback, useEffect } from 'react';
 import {
   View,
@@ -5,9 +6,8 @@ import {
   StyleSheet,
   TouchableOpacity,
   ScrollView,
-  Dimensions,
+  useWindowDimensions,
   TextInput,
-  Modal,
   Alert,
   Image,
   ActivityIndicator,
@@ -66,7 +66,7 @@ export const PhotoEditorScreen: React.FC<PhotoEditorScreenProps> = ({
   onSaveComplete,
 }) => {
   const insets = useGuaranteedInsets();
-  const windowWidth = Dimensions.get('window').width;
+  const { width: windowWidth, height: windowHeight } = useWindowDimensions();
 
   const [engine] = useState<PhotoEditorEngine>(() => {
     const uri = initialImageUri || DEMO_PHOTO_ASSET;
@@ -121,7 +121,7 @@ export const PhotoEditorScreen: React.FC<PhotoEditorScreenProps> = ({
 
   const isDesktop = windowWidth > 768;
   const maxAvailableWidth = Math.min(windowWidth - 32, isDesktop ? 600 : 380);
-  const effectiveCanvasHeight = isDesktop ? 400 : 330;
+  const effectiveCanvasHeight = Math.max(100, Math.min(400, (windowHeight - insets.top - insets.bottom) * 0.42));
 
   const canvasDim = useMemo(() => {
     return calculateCanvasDimensions(state.aspectRatio, maxAvailableWidth, effectiveCanvasHeight);
@@ -503,7 +503,7 @@ export const PhotoEditorScreen: React.FC<PhotoEditorScreenProps> = ({
 
       {/* Primary Tool Categories Dock */}
       <View style={styles.tabNavContainer}>
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.tabNavScroll}>
+        <ScrollView keyboardShouldPersistTaps="handled" horizontal showsHorizontalScrollIndicator={false} style={styles.tabNavScroll}>
           <TouchableOpacity
             style={styles.tabNavItem}
             onPress={() => setUploadModalVisible(true)}
@@ -601,13 +601,13 @@ export const PhotoEditorScreen: React.FC<PhotoEditorScreenProps> = ({
           styles.toolDrawer,
           {
             paddingBottom: insets.bottom,
-            height: 140 + insets.bottom,
+            height: Math.min(200, windowHeight * 0.27) + insets.bottom,
           },
         ]}
       >
         {/* 1. RATIO TAB */}
         {activeTab === 'ratio' && (
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.drawerRow}>
+          <ScrollView keyboardShouldPersistTaps="handled" horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.drawerRow}>
             {PHOTO_ASPECT_RATIOS.map((item) => {
               const isSelected = state.aspectRatio === item.ratio;
               return (
@@ -652,7 +652,7 @@ export const PhotoEditorScreen: React.FC<PhotoEditorScreenProps> = ({
 
         {/* 2. CUTOUT TAB */}
         {activeTab === 'cutout' && (
-          <ScrollView showsVerticalScrollIndicator={false} style={styles.drawerScrollVertical}>
+          <ScrollView keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false} style={styles.drawerScrollVertical}>
             {/* AI GrabCut Python Engine One-Tap Action */}
             <TouchableOpacity
               style={styles.aiActionBanner}
@@ -735,10 +735,10 @@ export const PhotoEditorScreen: React.FC<PhotoEditorScreenProps> = ({
 
         {/* 3. RETOUCH TAB */}
         {activeTab === 'retouch' && (
-          <ScrollView showsVerticalScrollIndicator={false} style={styles.drawerScrollVertical}>
+          <ScrollView keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false} style={styles.drawerScrollVertical}>
             {/* AI Studio Enhancements Row */}
             <Text style={styles.subHeading}>AI Studio Neural Enhancer 🧠</Text>
-            <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.aiEnhanceScroll}>
+            <ScrollView keyboardShouldPersistTaps="handled" horizontal showsHorizontalScrollIndicator={false} style={styles.aiEnhanceScroll}>
               <TouchableOpacity
                 style={styles.aiEnhanceChip}
                 onPress={() => handleAIEnhance('hdr')}
@@ -873,7 +873,7 @@ export const PhotoEditorScreen: React.FC<PhotoEditorScreenProps> = ({
 
         {/* 4. FILTERS TAB */}
         {activeTab === 'filters' && (
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.drawerRow}>
+          <ScrollView keyboardShouldPersistTaps="handled" horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.drawerRow}>
             {PHOTO_FILTERS.map((f) => {
               const isSelected = state.activeFilter === f.id;
               return (
@@ -900,7 +900,7 @@ export const PhotoEditorScreen: React.FC<PhotoEditorScreenProps> = ({
 
         {/* 5. ADJUST TAB */}
         {activeTab === 'adjust' && (
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.drawerRow}>
+          <ScrollView keyboardShouldPersistTaps="handled" horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.drawerRow}>
             <View style={styles.adjustTile}>
               <Text style={styles.adjustTileLabel}>Brightness</Text>
               <Text style={styles.adjustTileVal}>{state.adjustments.brightness}</Text>
@@ -968,7 +968,7 @@ export const PhotoEditorScreen: React.FC<PhotoEditorScreenProps> = ({
 
         {/* 6. BACKGROUND TAB */}
         {activeTab === 'background' && (
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.drawerRow}>
+          <ScrollView keyboardShouldPersistTaps="handled" horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.drawerRow}>
             <TouchableOpacity
               style={[styles.bgModeCard, state.background.type === 'blur' && styles.bgModeCardActive]}
               onPress={() => {
@@ -1018,7 +1018,7 @@ export const PhotoEditorScreen: React.FC<PhotoEditorScreenProps> = ({
               ))}
             </View>
 
-            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.drawerRow}>
+            <ScrollView keyboardShouldPersistTaps="handled" horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.drawerRow}>
               {STICKER_CATEGORIES[activeStickerTab].map((emoji, idx) => (
                 <TouchableOpacity
                   key={`${emoji}_${idx}`}
@@ -1037,7 +1037,7 @@ export const PhotoEditorScreen: React.FC<PhotoEditorScreenProps> = ({
 
         {/* 8. TEXT TAB */}
         {activeTab === 'text' && (
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.drawerRow}>
+          <ScrollView keyboardShouldPersistTaps="handled" horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.drawerRow}>
             <TouchableOpacity style={styles.addTextPrimaryBtn} onPress={() => setTextModalVisible(true)}>
               <Text style={styles.addTextPrimaryIcon}>+ 🔤</Text>
               <Text style={styles.addTextPrimaryLabel}>Add Text</Text>
@@ -1142,7 +1142,7 @@ export const PhotoEditorScreen: React.FC<PhotoEditorScreenProps> = ({
           <View style={styles.modalContent}>
             <Text style={styles.modalTitle}>Choose Photo</Text>
             <Text style={styles.uploadModalSubtitle}>
-              Select a photo from your phone's gallery to edit, retouch, or remove background.
+              Select a photo from your phone&#39;s gallery to edit, retouch, or remove background.
             </Text>
 
             <TouchableOpacity
